@@ -1,37 +1,39 @@
-# Referência da API — EventHub API
+# API Reference — EventHub API
 
-Documentação dos endpoints **já implementados** no código atual.
+Documentation for endpoints **currently implemented** in the codebase.
 
 ---
 
-## Informações gerais
+## General information
 
-| Item | Valor |
+| Item | Value |
 |------|-------|
 | Base URL (local) | `http://localhost:8080` |
-| Formato | JSON |
-| Autenticação | JWT Bearer (exceto register/login) |
-| Documentação interativa | http://localhost:8080/swagger-ui.html |
+| Format | JSON |
+| Authentication | JWT Bearer (except register/login) |
+| Interactive docs | http://localhost:8080/swagger-ui.html |
 | OpenAPI JSON | http://localhost:8080/api-docs |
+| Health check | http://localhost:8080/actuator/health |
 
-### Autenticação
+### Authentication
 
-Rotas públicas (sem token):
+Public routes (no token):
 
 - `POST /auth/register`
 - `POST /auth/login`
+- `GET /actuator/health`
 
-Todas as demais rotas exigem o header:
+All other routes require:
 
 ```http
 Authorization: Bearer <token>
 ```
 
-O token é obtido em `POST /auth/login`. Expiração padrão: **24 horas** (`JWT_EXPIRATION_MS=86400000`).
+The token is obtained from `POST /auth/login`. Default expiration: **24 hours** (`JWT_EXPIRATION_MS=86400000`).
 
-### Formato de erro padrão
+### Standard error format
 
-Erros tratados pelo `GlobalExceptionHandler`:
+Errors handled by `GlobalExceptionHandler` and `SecurityProblemHandler`:
 
 ```json
 {
@@ -44,15 +46,13 @@ Erros tratados pelo `GlobalExceptionHandler`:
 }
 ```
 
-| Status | Situação |
-|--------|----------|
-| `400` | Erro de validação ou regra de negócio |
-| `401` | Não autenticado ou credenciais inválidas |
-| `403` | Autenticado, mas sem permissão |
-| `404` | Recurso não encontrado |
-| `500` | Erro interno |
-
-> **Observação:** respostas 401/403 geradas diretamente pelo Spring Security podem retornar corpo vazio em alguns casos. Melhoria planejada — ver [`NEXT_STEPS.md`](NEXT_STEPS.md).
+| Status | Meaning |
+|--------|---------|
+| `400` | Validation or business rule error |
+| `401` | Not authenticated or invalid credentials |
+| `403` | Authenticated but not authorized |
+| `404` | Resource not found |
+| `500` | Internal server error |
 
 ---
 
@@ -60,9 +60,9 @@ Erros tratados pelo `GlobalExceptionHandler`:
 
 ### POST /auth/register
 
-Cadastra um novo usuário.
+Registers a new user.
 
-**Autenticação:** não requerida
+**Authentication:** not required
 
 **Body:**
 
@@ -74,36 +74,26 @@ Cadastra um novo usuário.
 }
 ```
 
-| Campo | Tipo | Obrigatório | Regras |
-|-------|------|-------------|--------|
-| `name` | string | Sim | Máx. 255 caracteres |
-| `email` | string | Sim | Formato e-mail válido, único |
-| `password` | string | Sim | Mín. 6 caracteres |
+| Field | Type | Required | Rules |
+|-------|------|----------|-------|
+| `name` | string | Yes | Max 255 characters |
+| `email` | string | Yes | Valid email format, unique |
+| `password` | string | Yes | Min 6 characters |
 
-**Resposta `201 Created`:**
+**Response `201 Created`:** `UserResponse` (id, name, email, createdAt, updatedAt)
 
-```json
-{
-  "id": "d7a7f01d-79a7-4fea-bf29-349c539e7ca1",
-  "name": "Marcus",
-  "email": "marcus@email.com",
-  "createdAt": "2026-06-11T00:00:00Z",
-  "updatedAt": "2026-06-11T00:00:00Z"
-}
-```
-
-**Erros comuns:**
+**Common errors:**
 
 - `400` — `"Email already registered"`
-- `400` — erros de validação nos campos
+- `400` — field validation errors
 
 ---
 
 ### POST /auth/login
 
-Autentica o usuário e retorna JWT.
+Authenticates the user and returns a JWT.
 
-**Autenticação:** não requerida
+**Authentication:** not required
 
 **Body:**
 
@@ -114,7 +104,7 @@ Autentica o usuário e retorna JWT.
 }
 ```
 
-**Resposta `200 OK`:**
+**Response `200 OK`:**
 
 ```json
 {
@@ -123,7 +113,7 @@ Autentica o usuário e retorna JWT.
 }
 ```
 
-**Erros comuns:**
+**Common errors:**
 
 - `401` — `"Invalid email or password"`
 
@@ -131,31 +121,21 @@ Autentica o usuário e retorna JWT.
 
 ### GET /auth/me
 
-Retorna o perfil do usuário autenticado.
+Returns the authenticated user's profile.
 
-**Autenticação:** requerida
+**Authentication:** required
 
-**Resposta `200 OK`:**
-
-```json
-{
-  "id": "d7a7f01d-79a7-4fea-bf29-349c539e7ca1",
-  "name": "Marcus",
-  "email": "marcus@email.com",
-  "createdAt": "2026-06-11T00:00:00Z",
-  "updatedAt": "2026-06-11T00:00:00Z"
-}
-```
+**Response `200 OK`:** `UserResponse`
 
 ---
 
 ## Events
 
-Todos os endpoints abaixo **requerem autenticação**.
+All endpoints below **require authentication**.
 
 ### POST /events
 
-Cria um evento. O usuário autenticado torna-se o **dono** (`owner`).
+Creates an event. The authenticated user becomes the **owner**.
 
 **Body:**
 
@@ -163,41 +143,25 @@ Cria um evento. O usuário autenticado torna-se o **dono** (`owner`).
 {
   "title": "Java Meetup",
   "description": "Spring Boot 3 workshop",
-  "location": "São Paulo",
+  "location": "New York",
   "startDateTime": "2026-12-15T19:00:00Z",
   "endDateTime": "2026-12-15T21:00:00Z",
   "maxParticipants": 50
 }
 ```
 
-| Campo | Tipo | Obrigatório | Regras |
-|-------|------|-------------|--------|
-| `title` | string | Sim | Não vazio |
-| `description` | string | Não | — |
-| `location` | string | Sim | Não vazio |
-| `startDateTime` | ISO-8601 (UTC) | Sim | Não pode estar no passado |
-| `endDateTime` | ISO-8601 (UTC) | Sim | Deve ser ≥ `startDateTime` |
-| `maxParticipants` | integer | Sim | Valor positivo |
+| Field | Type | Required | Rules |
+|-------|------|----------|-------|
+| `title` | string | Yes | Not blank |
+| `description` | string | No | — |
+| `location` | string | Yes | Not blank |
+| `startDateTime` | ISO-8601 (UTC) | Yes | Cannot be in the past |
+| `endDateTime` | ISO-8601 (UTC) | Yes | Must be ≥ `startDateTime` |
+| `maxParticipants` | integer | Yes | Positive value |
 
-**Resposta `201 Created`:**
+**Response `201 Created`:** `EventResponse` (includes `ownerId`, `ownerName`)
 
-```json
-{
-  "id": "11f661fe-eb5c-4d22-be5d-947550436949",
-  "title": "Java Meetup",
-  "description": "Spring Boot 3 workshop",
-  "location": "São Paulo",
-  "startDateTime": "2026-12-15T19:00:00Z",
-  "endDateTime": "2026-12-15T21:00:00Z",
-  "maxParticipants": 50,
-  "ownerId": "d7a7f01d-79a7-4fea-bf29-349c539e7ca1",
-  "ownerName": "Marcus",
-  "createdAt": "2026-06-11T00:00:00Z",
-  "updatedAt": "2026-06-11T00:00:00Z"
-}
-```
-
-**Erros comuns:**
+**Common errors:**
 
 - `400` — `"End date and time cannot be before start date and time"`
 
@@ -205,45 +169,37 @@ Cria um evento. O usuário autenticado torna-se o **dono** (`owner`).
 
 ### GET /events
 
-Lista todos os eventos.
+Lists all events.
 
-**Resposta `200 OK`:** array de `EventResponse`
+**Response `200 OK`:** array of `EventResponse`
 
 ---
 
 ### GET /events/mine
 
-Lista eventos criados pelo usuário autenticado.
-
-**Resposta `200 OK`:** array de `EventResponse`
+Lists events created by the authenticated user.
 
 ---
 
 ### GET /events/this-week
 
-Lista eventos cuja **data de início** cai na semana corrente (segunda 00:00 UTC até domingo 23:59 UTC).
-
-**Resposta `200 OK`:** array de `EventResponse`
+Lists events whose **start date** falls in the current week (Monday 00:00 UTC through Sunday).
 
 ---
 
 ### GET /events/registered
 
-Lista eventos em que o usuário autenticado possui inscrição com status `CONFIRMED`.
-
-**Resposta `200 OK`:** array de `EventResponse`
+Lists events where the authenticated user has a `CONFIRMED` registration.
 
 ---
 
 ### GET /events/{id}
 
-Retorna detalhes de um evento.
+Returns event details.
 
-**Path param:** `id` — UUID do evento
+**Path param:** `id` — event UUID
 
-**Resposta `200 OK`:** objeto `EventResponse`
-
-**Erros comuns:**
+**Common errors:**
 
 - `404` — `"Event not found"`
 
@@ -251,15 +207,11 @@ Retorna detalhes de um evento.
 
 ### PUT /events/{id}
 
-Atualiza um evento. **Apenas o dono** pode executar.
+Updates an event. **Owner only.**
 
-**Path param:** `id` — UUID do evento
+**Body:** same format as `POST /events`
 
-**Body:** mesmo formato de `POST /events`
-
-**Resposta `200 OK`:** objeto `EventResponse` atualizado
-
-**Erros comuns:**
+**Common errors:**
 
 - `403` — `"Only the event owner can perform this action"`
 - `404` — `"Event not found"`
@@ -268,54 +220,35 @@ Atualiza um evento. **Apenas o dono** pode executar.
 
 ### DELETE /events/{id}
 
-Exclui um evento. **Apenas o dono** pode executar. Inscrições associadas são removidas em cascata (FK `ON DELETE CASCADE`).
+Deletes an event. **Owner only.** Registrations are removed via `ON DELETE CASCADE`.
 
-**Path param:** `id` — UUID do evento
-
-**Resposta `204 No Content`**
-
-**Erros comuns:**
-
-- `403` — `"Only the event owner can perform this action"`
-- `404` — `"Event not found"`
+**Response `204 No Content`**
 
 ---
 
 ## Registrations
 
-Todos os endpoints abaixo **requerem autenticação**.
+All endpoints below **require authentication**.
 
 Base path: `/events/{eventId}`
 
 ### POST /events/{eventId}/registrations
 
-Inscreve o usuário autenticado no evento.
+Registers the authenticated user for an event.
 
-**Path param:** `eventId` — UUID do evento
+**Body:** none
 
-**Body:** nenhum
+**Response `201 Created`:** `RegistrationResponse`
 
-**Resposta `201 Created`:**
+**Business rules:**
 
-```json
-{
-  "id": "6eeea845-1121-4784-a67d-c624ece4099f",
-  "eventId": "11f661fe-eb5c-4d22-be5d-947550436949",
-  "userId": "80b2c54e-966f-4581-a05f-18cece5af554",
-  "status": "CONFIRMED",
-  "registeredAt": "2026-06-11T00:00:00Z"
-}
-```
+- Event owner **cannot** register
+- Ended events **reject** new registrations
+- Full events **block** new registrations
+- Duplicate `CONFIRMED` registration returns error
+- Existing `CANCELED` registration is **reactivated**
 
-**Regras de negócio:**
-
-- Dono do evento **não pode** se inscrever
-- Evento encerrado (`endDateTime` no passado) **não aceita** inscrições
-- Evento lotado (`CONFIRMED` ≥ `maxParticipants`) **bloqueia** novas inscrições
-- Usuário já inscrito (`CONFIRMED`) recebe erro
-- Se existir inscrição `CANCELED`, a inscrição é **reativada**
-
-**Erros comuns:**
+**Common errors:**
 
 - `400` — `"Event owners do not need to register for their own events"`
 - `400` — `"Cannot register for an event that has already ended"`
@@ -326,76 +259,49 @@ Inscreve o usuário autenticado no evento.
 
 ### DELETE /events/{eventId}/registrations/me
 
-Cancela a inscrição do usuário autenticado (status → `CANCELED`).
+Cancels the authenticated user's registration (status → `CANCELED`).
 
-**Path param:** `eventId` — UUID do evento
-
-**Resposta `204 No Content`**
-
-**Erros comuns:**
-
-- `400` — `"Registration not found"`
-- `400` — `"Registration is already canceled"`
+**Response `204 No Content`**
 
 ---
 
 ### GET /events/{eventId}/participants
 
-Lista participantes com inscrição `CONFIRMED`. **Apenas o dono do evento** pode acessar.
+Lists `CONFIRMED` participants. **Event owner only.**
 
-**Path param:** `eventId` — UUID do evento
+**Response `200 OK`:** array of `ParticipantResponse`
 
-**Resposta `200 OK`:**
-
-```json
-[
-  {
-    "userId": "80b2c54e-966f-4581-a05f-18cece5af554",
-    "userName": "Ana",
-    "userEmail": "ana@email.com",
-    "registeredAt": "2026-06-11T00:00:00Z"
-  }
-]
-```
-
-**Erros comuns:**
+**Common errors:**
 
 - `403` — `"Only the event owner can view participants"`
-- `404` — `"Event not found"`
 
 ---
 
-## Endpoints planejados
+## Planned endpoints
 
-Itens **não presentes** no código atual. Mantidos aqui apenas como referência de evolução:
+Not present in the current codebase:
 
-| Método | Endpoint | Descrição |
-|--------|----------|-----------|
-| POST | `/auth/refresh` | Refresh token — *planejado* |
-| GET | `/events?query=&page=&size=` | Listagem paginada e filtrada — *planejado* |
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/auth/refresh` | Refresh token — *planned* |
+| GET | `/events?query=&page=&size=` | Paginated filtered listing — *planned* |
 
-### Infraestrutura
-
-| Método | Endpoint | Descrição |
-|--------|----------|-----------|
-| GET | `/actuator/health` | Health check público — **implementado** |
-
-Consulte [`NEXT_STEPS.md`](NEXT_STEPS.md) para prioridades.
+See [`NEXT_STEPS.md`](NEXT_STEPS.md) for priorities.
 
 ---
 
-## Entidades do banco (referência)
+## Database tables (reference)
 
-| Tabela | Migration |
-|--------|-----------|
-| `events` | V1 (+ `owner_id` em V3) |
+| Table | Migration |
+|-------|-----------|
+| `events` | V1 (+ `owner_id` in V3) |
 | `users` | V2 |
 | `event_registrations` | V4 |
 
-Status de inscrição: `CONFIRMED`, `CANCELED`.
+Registration status values: `CONFIRMED`, `CANCELED`.
 
 ---
 
-## Collection Bruno
+## Bruno collection
 
-Requests espelhando estes endpoints estão em `api-client/eventhub/`. Ver [`api-client/README.md`](../api-client/README.md).
+Requests mirroring these endpoints live in `api-client/eventhub/`. See [`api-client/README.md`](../api-client/README.md).

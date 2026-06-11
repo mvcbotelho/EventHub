@@ -1,95 +1,96 @@
 # EventHub API
 
-API REST para criação, divulgação e participação em eventos. Projeto de aprendizado e portfólio construído com **Java 21**, **Spring Boot 3** e **PostgreSQL**, seguindo uma abordagem **Docker-first**.
+REST API for creating, publishing, and joining events. Learning and portfolio project built with **Java 21**, **Spring Boot 3**, and **PostgreSQL**, using a **Docker-first** approach.
 
-## Objetivo do projeto
+## Project goal
 
-Oferecer uma API moderna e bem estruturada para que usuários possam:
+Provide a modern, well-structured API where users can:
 
-- criar conta e autenticar-se;
-- publicar e gerenciar eventos;
-- descobrir eventos disponíveis;
-- inscrever-se e cancelar inscrições;
-- permitir que donos de eventos vejam quem participará.
+- register and authenticate;
+- publish and manage events;
+- discover available events;
+- register for and cancel event registrations;
+- allow event owners to view participants.
 
-O foco é aprendizado prático de backend, boas práticas de arquitetura e um código evolutivo, pronto para crescer.
+The focus is hands-on backend learning, solid architecture practices, and evolvable code ready to grow.
 
-## Stack utilizada
+## Stack
 
-| Tecnologia | Uso |
-|------------|-----|
-| Java 21 | Linguagem |
+| Technology | Purpose |
+|------------|---------|
+| Java 21 | Language |
 | Spring Boot 3.4.5 | Framework |
-| Maven | Build e dependências |
-| Spring Web | API REST |
-| Spring Data JPA | Persistência |
-| Spring Security + JWT (jjwt) | Autenticação e autorização |
-| Bean Validation | Validação de entrada |
-| PostgreSQL 16 | Banco de dados |
-| Flyway | Versionamento de schema |
-| SpringDoc OpenAPI | Documentação interativa (Swagger) |
-| Docker + Docker Compose | Ambiente de execução |
-| JUnit + H2 (test) | Teste básico de contexto |
-| Bruno | Collection HTTP para testes manuais |
+| Maven | Build and dependencies |
+| Spring Web | REST API |
+| Spring Data JPA | Persistence |
+| Spring Security + JWT (jjwt) | Authentication and authorization |
+| Bean Validation | Input validation |
+| PostgreSQL 16 | Database |
+| Flyway | Schema versioning |
+| SpringDoc OpenAPI | Interactive docs (Swagger) |
+| Docker + Docker Compose | Runtime environment |
+| JUnit + Testcontainers | Automated tests |
+| Bruno | HTTP collection for manual testing |
 
-## Funcionalidades já implementadas
+## Implemented features
 
-### Autenticação
-- Cadastro de usuário (`POST /auth/register`)
-- Login com JWT (`POST /auth/login`)
-- Perfil do usuário autenticado (`GET /auth/me`)
+### Authentication
+- User registration (`POST /auth/register`)
+- JWT login (`POST /auth/login`)
+- Authenticated user profile (`GET /auth/me`)
 
-### Eventos
-- CRUD completo de eventos
-- Listagem de eventos da semana (`GET /events/this-week`)
-- Listagem dos eventos do usuário (`GET /events/mine`)
-- Listagem de eventos inscritos (`GET /events/registered`)
-- Edição e exclusão restritas ao dono do evento
+### Events
+- Full event CRUD
+- Events this week (`GET /events/this-week`)
+- User's events (`GET /events/mine`)
+- Registered events (`GET /events/registered`)
+- Update and delete restricted to event owner
 
-### Inscrições
-- Inscrição em evento
-- Cancelamento da própria inscrição
-- Listagem de participantes (apenas dono do evento)
+### Registrations
+- Event registration
+- Cancel own registration
+- List participants (event owner only)
 
-### Infraestrutura e qualidade
+### Infrastructure and quality
 - Docker-first (`Dockerfile` + `docker-compose.yml`)
-- Migrations Flyway (V1–V4)
-- Tratamento global de erros (`@RestControllerAdvice`)
-- DTOs, services e repositories por domínio
+- Flyway migrations (V1–V4)
+- Global error handling (`@RestControllerAdvice`)
+- DTOs, services, and repositories by domain
 - Swagger/OpenAPI
-- Collection Bruno em `api-client/eventhub`
+- Bruno collection in `api-client/eventhub`
+- Unit and integration tests (Testcontainers)
+- GitHub Actions CI
+- Actuator health endpoint
 
-## Funcionalidades planejadas
+## Planned features
 
-Consulte o roadmap detalhado em [`docs/NEXT_STEPS.md`](docs/NEXT_STEPS.md). Resumo:
+See the detailed roadmap in [`docs/NEXT_STEPS.md`](docs/NEXT_STEPS.md). Summary:
 
-- Testes unitários e de integração (Testcontainers)
-- Pipeline de CI/CD
-- Melhorias de observabilidade (Actuator, logs estruturados)
-- Paginação e filtros nas listagens
-- Refresh token e políticas de segurança avançadas
+- Pagination and filters on listings
+- Refresh token and advanced security policies
+- Structured logging and observability improvements
 
-## Arquitetura e organização das pastas
+## Project structure
 
 ```text
 EventHub/
-├── api-client/                 # Collection Bruno
+├── api-client/                 # Bruno collection
 │   └── eventhub/
-├── docs/                       # Documentação do projeto
+├── docs/
 │   ├── API.md
 │   ├── ARCHITECTURE.md
 │   └── NEXT_STEPS.md
 ├── src/
 │   ├── main/java/com/marcus/eventhub/
-│   │   ├── auth/               # JWT, login, registro, security
-│   │   ├── user/               # Entidade e repository de User
-│   │   ├── event/              # Domínio de eventos
-│   │   ├── registration/       # Inscrições e participantes
-│   │   ├── common/             # Config, exceções globais
+│   │   ├── auth/
+│   │   ├── user/
+│   │   ├── event/
+│   │   ├── registration/
+│   │   ├── common/
 │   │   └── EventHubApplication.java
 │   ├── main/resources/
 │   │   ├── application.yml
-│   │   └── db/migration/       # Flyway V1–V4
+│   │   └── db/migration/
 │   └── test/
 ├── Dockerfile
 ├── docker-compose.yml
@@ -97,131 +98,118 @@ EventHub/
 └── pom.xml
 ```
 
-Organização **por domínio/feature** (`auth`, `user`, `event`, `registration`), com camadas Controller → Service → Repository dentro de cada pacote.
+Organized **by domain/feature** (`auth`, `user`, `event`, `registration`) with Controller → Service → Repository layers.
 
-Documentação complementar:
+Additional documentation:
 
-- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — visão arquitetural
-- [`docs/API.md`](docs/API.md) — referência de endpoints
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — architecture overview
+- [`docs/API.md`](docs/API.md) — endpoint reference
 
-## Pré-requisitos
+## Prerequisites
 
 - [Docker](https://docs.docker.com/get-docker/)
 - [Docker Compose](https://docs.docker.com/compose/)
 
-Opcional para testes manuais:
+Optional for manual testing:
 
 - [Bruno](https://www.usebruno.com/)
-- `curl` e `jq`
+- `curl` and `jq`
 
-## Como rodar o projeto com Docker
-
-1. Copie as variáveis de ambiente:
+## Run with Docker
 
 ```bash
 cp .env.example .env
-```
-
-2. Suba a aplicação e o banco:
-
-```bash
 docker compose up --build
 ```
 
-3. Aguarde os containers `eventhub-postgres` (healthy) e `eventhub-api` (porta 8080).
+Wait for `eventhub-postgres` (healthy) and `eventhub-api` (port 8080).
 
-## Como parar os containers
+## Stop containers
 
 ```bash
 docker compose down
 ```
 
-Para remover também o volume do PostgreSQL (apaga os dados):
+To remove the PostgreSQL volume (deletes data):
 
 ```bash
 docker compose down -v
 ```
 
-## Como acessar a API
+## Access the API
 
-| Recurso | URL |
-|---------|-----|
-| Base URL local | http://localhost:8080 |
+| Resource | URL |
+|----------|-----|
+| Base URL (local) | http://localhost:8080 |
 | Health check | http://localhost:8080/actuator/health |
 | Swagger UI | http://localhost:8080/swagger-ui.html |
 | OpenAPI JSON | http://localhost:8080/api-docs |
 
-### Autenticação
+### Authentication
 
-Rotas públicas:
+Public routes:
 
 - `POST /auth/register`
 - `POST /auth/login`
 
-Demais rotas exigem:
+All other routes require:
 
 ```http
 Authorization: Bearer <token>
 ```
 
-No Swagger, clique em **Authorize** e cole **somente o token** (sem o prefixo `Bearer`).
+In Swagger, click **Authorize** and paste **only the token** (without the `Bearer` prefix).
 
-## Como testar com Bruno
+## Test with Bruno
 
-1. Instale o [Bruno](https://www.usebruno.com/).
-2. Abra a collection: `api-client/eventhub`
-3. Selecione o environment **local**
-4. Execute **Auth → Register** (primeira vez) e **Auth → Login** (salva `token` automaticamente)
-5. Use os requests das pastas **Events** e **Registrations**
+1. Install [Bruno](https://www.usebruno.com/)
+2. Open collection: `api-client/eventhub`
+3. Select the **local** environment (top-right dropdown)
+4. Run **Auth → Register** (first time) and **Auth → Login** (saves `token` automatically)
+5. Use requests under **Events** and **Registrations**
 
-Detalhes em [`api-client/README.md`](api-client/README.md).
+See [`api-client/README.md`](api-client/README.md).
 
-## Variáveis de ambiente
+## Environment variables
 
-Definidas em `.env.example` e usadas pelo `docker-compose.yml`:
+Defined in `.env.example` and used by `docker-compose.yml`:
 
-| Variável | Padrão | Descrição |
-|----------|--------|-----------|
-| `POSTGRES_DB` | `eventhub` | Nome do banco |
-| `POSTGRES_USER` | `eventhub` | Usuário do PostgreSQL |
-| `POSTGRES_PASSWORD` | `eventhub` | Senha do PostgreSQL |
-| `POSTGRES_PORT` | `5432` | Porta exposta do PostgreSQL |
-| `APP_PORT` | `8080` | Porta exposta da API |
-| `JWT_SECRET` | *(dev default)* | Chave HMAC para assinar JWT |
-| `JWT_EXPIRATION_MS` | `86400000` | Expiração do token (24h) |
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `POSTGRES_DB` | `eventhub` | Database name |
+| `POSTGRES_USER` | `eventhub` | PostgreSQL user |
+| `POSTGRES_PASSWORD` | `eventhub` | PostgreSQL password |
+| `POSTGRES_PORT` | `5432` | Exposed PostgreSQL port |
+| `APP_PORT` | `8080` | Exposed API port |
+| `JWT_SECRET` | *(dev default)* | HMAC key for JWT signing |
+| `JWT_EXPIRATION_MS` | `86400000` | Token expiration (24h) |
 
-> **Atenção:** altere `JWT_SECRET` em ambientes reais. O valor padrão serve apenas para desenvolvimento local.
+> **Warning:** change `JWT_SECRET` in real environments. The default is for local development only.
 
-## Comandos úteis
+## Useful commands
 
 ```bash
-# Subir em background
+# Run in background
 docker compose up --build -d
 
-# Testes unitários (rápidos, sem Docker extra)
+# Unit tests (fast, no extra Docker)
 docker run --rm -v "$PWD":/app -w /app maven:3.9.9-eclipse-temurin-21 mvn test
 
-# Suite completa incluindo integração (requer Docker para Testcontainers)
+# Full suite including integration (requires Docker for Testcontainers)
 docker run --rm -v "$PWD":/app -w /app -v /var/run/docker.sock:/var/run/docker.sock \
   maven:3.9.9-eclipse-temurin-21 mvn verify
 
 # Health check
 curl http://localhost:8080/actuator/health
 
-# Ver logs da API
+# API logs
 docker logs -f eventhub-api
-
-# Ver logs do PostgreSQL
-docker logs -f eventhub-postgres
-
-# Rebuild forçado
-docker compose up --build --force-recreate
 ```
 
-## Exemplo rápido com curl
+## Quick curl example
 
 ```bash
-# Cadastro
+# Register
 curl -X POST http://localhost:8080/auth/register \
   -H "Content-Type: application/json" \
   -d '{"name":"Marcus","email":"marcus@email.com","password":"123456"}'
@@ -231,58 +219,55 @@ TOKEN=$(curl -s -X POST http://localhost:8080/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"marcus@email.com","password":"123456"}' | jq -r .token)
 
-# Perfil
+# Profile
 curl http://localhost:8080/auth/me \
   -H "Authorization: Bearer $TOKEN"
 
-# Criar evento
+# Create event
 curl -X POST http://localhost:8080/events \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "title": "Java Meetup",
     "description": "Spring Boot 3",
-    "location": "São Paulo",
+    "location": "New York",
     "startDateTime": "2026-12-15T19:00:00Z",
     "endDateTime": "2026-12-15T21:00:00Z",
     "maxParticipants": 50
   }'
 ```
 
-## Status atual do projeto
+## Project status
 
-| Área | Status |
+| Area | Status |
 |------|--------|
-| Setup Docker + Flyway | Concluído |
-| CRUD de eventos | Concluído |
-| Autenticação JWT | Concluído |
-| Ownership de eventos | Concluído |
-| Inscrições | Concluído |
-| Swagger/OpenAPI | Concluído |
-| Collection Bruno | Concluído |
-| Testes automatizados | Unitários + integração (Testcontainers) |
+| Docker + Flyway setup | Done |
+| Event CRUD | Done |
+| JWT authentication | Done |
+| Event ownership | Done |
+| Registrations | Done |
+| Swagger/OpenAPI | Done |
+| Bruno collection | Done |
+| Automated tests | Unit + integration (Testcontainers) |
 | CI/CD | GitHub Actions (`mvn verify`) |
 | Actuator | `GET /actuator/health` |
-| Testcontainers | Planejado |
 
-**Versão:** `0.0.1-SNAPSHOT` — MVP funcional, pronto para evolução em qualidade e observabilidade.
+**Version:** `0.0.1-SNAPSHOT` — functional MVP, ready for product evolution.
 
-> **Nota:** as mensagens de erro da API estão em **inglês**. A documentação do projeto está em **português**.
+## Roadmap summary
 
-## Roadmap resumido
+| Phase | Theme | Status |
+|-------|-------|--------|
+| 1 | Setup, Docker, Flyway, event CRUD | Done |
+| 2 | JWT auth and users | Done |
+| 3 | Event ownership | Done |
+| 4 | Event registrations | Done |
+| 5 | Bruno collection | Done |
+| 6 | Tests, CI/CD, observability | Done |
+| 7 | Pagination, filters, product evolution | **Next** |
 
-| Fase | Tema | Status |
-|------|------|--------|
-| 1 | Setup, Docker, Flyway, CRUD de eventos | Concluída |
-| 2 | Autenticação JWT e usuários | Concluída |
-| 3 | Ownership de eventos | Concluída |
-| 4 | Inscrições em eventos | Concluída |
-| 5 | Collection Bruno | Concluída |
-| 6 | Testes, CI/CD e observabilidade | **Concluída** |
-| 7 | Paginação, filtros e evolução de produto | **Próxima** |
+Details in [`docs/NEXT_STEPS.md`](docs/NEXT_STEPS.md).
 
-Detalhes em [`docs/NEXT_STEPS.md`](docs/NEXT_STEPS.md).
+## License
 
-## Licença
-
-A confirmar.
+TBD.

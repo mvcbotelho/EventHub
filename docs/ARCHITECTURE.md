@@ -1,15 +1,15 @@
-# Arquitetura — EventHub API
+# Architecture — EventHub API
 
-Visão geral das decisões técnicas e da organização do projeto.
+Overview of technical decisions and project organization.
 
 ---
 
-## Visão geral
+## Overview
 
-O **EventHub API** é uma aplicação monolítica Spring Boot que expõe endpoints REST para gerenciamento de eventos e inscrições. A persistência usa PostgreSQL com schema versionado pelo Flyway. A autenticação é **stateless** via JWT.
+**EventHub API** is a Spring Boot monolith exposing REST endpoints for event management and registrations. Persistence uses PostgreSQL with Flyway schema versioning. Authentication is **stateless** via JWT.
 
 ```text
-Cliente (Bruno / Swagger / curl)
+Client (Bruno / Swagger / curl)
         │
         ▼
 ┌───────────────────┐
@@ -17,11 +17,11 @@ Cliente (Bruno / Swagger / curl)
 └─────────┬─────────┘
           ▼
 ┌───────────────────┐
-│    Controllers    │  ← validação (@Valid), HTTP
+│    Controllers    │  ← validation (@Valid), HTTP
 └─────────┬─────────┘
           ▼
 ┌───────────────────┐
-│     Services      │  ← regras de negócio, autorização
+│     Services      │  ← business rules, authorization
 └─────────┬─────────┘
           ▼
 ┌───────────────────┐
@@ -35,234 +35,179 @@ Cliente (Bruno / Swagger / curl)
 
 ---
 
-## Decisões técnicas atuais
+## Current technical decisions
 
-| Decisão | Motivo |
-|---------|--------|
-| **Organização por domínio** | Cada feature (`auth`, `user`, `event`, `registration`) tem seu pacote. Facilita navegação e evolução sem over-engineering inicial. |
-| **DTOs separados das entidades** | A API não expõe entidades JPA. Entrada e saída são records (`CreateEventRequest`, `EventResponse`, etc.). |
-| **Regras no Service** | Validações de negócio e autorização (dono, participante) ficam na camada de serviço, não só no Security. |
-| **JWT stateless** | Sem sessão no servidor; filtro valida token a cada request. Simples e adequado para API REST. |
-| **BCrypt** | Senhas nunca armazenadas em texto plano. |
-| **Flyway + `ddl-auto: validate`** | Schema versionado no Git; Hibernate apenas valida, sem alterar o banco automaticamente. |
-| **Docker-first** | App conecta ao PostgreSQL pelo hostname `postgres` na rede Docker. Reduz dependências locais. |
-| **Mensagens da API em inglês** | Padrão para portfólio internacional; documentação do projeto em português. |
-| **Open-in-view desabilitado** | `spring.jpa.open-in-view: false` evita lazy loading fora de transação em controllers. |
+| Decision | Rationale |
+|----------|-----------|
+| **Domain organization** | Each feature (`auth`, `user`, `event`, `registration`) has its own package. Easy to navigate without over-engineering. |
+| **DTOs separate from entities** | The API does not expose JPA entities. Input/output use records (`CreateEventRequest`, `EventResponse`, etc.). |
+| **Rules in Service layer** | Business validation and authorization (owner, participant) live in services, not only in Security. |
+| **Stateless JWT** | No server-side session; filter validates token on each request. Simple and suitable for REST. |
+| **BCrypt** | Passwords are never stored in plain text. |
+| **Flyway + `ddl-auto: validate`** | Schema versioned in Git; Hibernate only validates, never alters the database. |
+| **Docker-first** | App connects to PostgreSQL via hostname `postgres` on the Docker network. |
+| **English API messages** | All validation and business error messages are in English. |
+| **Open-in-view disabled** | `spring.jpa.open-in-view: false` avoids lazy loading outside transactions in controllers. |
 
 ---
 
-## Abordagem Docker-first
+## Docker-first approach
 
-### Componentes
+### Components
 
-| Serviço | Imagem / build | Porta | Função |
-|---------|----------------|-------|--------|
-| `postgres` | `postgres:16-alpine` | 5432 | Banco de dados |
-| `app` | Build local (`Dockerfile`) | 8080 | API Spring Boot |
+| Service | Image / build | Port | Role |
+|---------|---------------|------|------|
+| `postgres` | `postgres:16-alpine` | 5432 | Database |
+| `app` | Local build (`Dockerfile`) | 8080 | Spring Boot API |
 
 ### Dockerfile
 
 Multi-stage:
 
-1. **Build** — Maven 3.9 + Temurin 21 compila o JAR
-2. **Runtime** — JRE Alpine 21 executa o JAR com usuário não-root (`spring`)
+1. **Build** — Maven 3.9 + Temurin 21 compiles the JAR
+2. **Runtime** — JRE Alpine 21 runs the JAR as non-root user (`spring`)
 
-### Fluxo de inicialização
+### Startup flow
 
-1. PostgreSQL sobe e passa no healthcheck (`pg_isready`)
-2. App conecta em `jdbc:postgresql://postgres:5432/eventhub`
-3. Flyway aplica migrations pendentes (V1–V4)
-4. Hibernate valida entidades contra o schema
-5. Tomcat escuta na porta 8080
+1. PostgreSQL starts and passes healthcheck (`pg_isready`)
+2. App connects to `jdbc:postgresql://postgres:5432/eventhub`
+3. Flyway applies pending migrations (V1–V4)
+4. Hibernate validates entities against the schema
+5. Tomcat listens on port 8080
 
 ---
 
-## Organização por domínio
+## Domain organization
 
 ```text
 com.marcus.eventhub
-├── auth/           Controllers, services e config de autenticação
-│   ├── dto/
-│   ├── AuthController, AuthService
-│   ├── JwtService, JwtAuthenticationFilter
-│   ├── SecurityConfig, CurrentUserService
-│   └── CustomUserDetailsService
-├── user/           Entidade User e UserRepository
-├── event/          Domínio de eventos
-│   ├── dto/
-│   ├── Event, EventRepository
-│   ├── EventService, EventController
-├── registration/   Inscrições
-│   ├── dto/
-│   ├── EventRegistration, RegistrationStatus
-│   ├── RegistrationService, RegistrationController
+├── auth/           Authentication controllers, services, config
+├── user/           User entity and UserRepository
+├── event/          Events domain
+├── registration/   Registrations
 └── common/
-    ├── config/     OpenApiConfig
-    └── exception/  GlobalExceptionHandler, exceções customizadas
+    ├── config/     OpenApiConfig, CorsConfig
+    └── exception/  GlobalExceptionHandler, custom exceptions
 ```
 
 ---
 
-## Camadas do projeto
+## Project layers
 
 ### Controller
 
-- Recebe HTTP, delega ao service, retorna DTOs
-- Usa `@Valid` para Bean Validation
-- Anotações Swagger (`@Operation`, `@Tag`, `@SecurityRequirement`)
-- **Não contém** regras de negócio
-
-Exemplos: `AuthController`, `EventController`, `RegistrationController`
+- Handles HTTP, delegates to service, returns DTOs
+- Uses `@Valid` for Bean Validation
+- Swagger annotations (`@Operation`, `@Tag`, `@SecurityRequirement`)
+- **No** business rules
 
 ### Service
 
-- Orquestra regras de negócio e transações (`@Transactional`)
-- Valida ownership e permissões
-- Lança exceções de domínio (`BusinessException`, `ForbiddenException`, `ResourceNotFoundException`)
-
-Exemplos: `AuthService`, `EventService`, `RegistrationService`
+- Orchestrates business rules and transactions (`@Transactional`)
+- Validates ownership and permissions
+- Throws domain exceptions (`BusinessException`, `ForbiddenException`, `ResourceNotFoundException`)
 
 ### Repository
 
-- Interface Spring Data JPA
-- Queries customizadas com `@Query` e `@EntityGraph` quando necessário (ex.: carregar `owner` junto com `Event`)
-
-Exemplos: `UserRepository`, `EventRepository`, `EventRegistrationRepository`
+- Spring Data JPA interfaces
+- Custom `@Query` and `@EntityGraph` when needed (e.g. load `owner` with `Event`)
 
 ### Entity
 
-- Mapeamento JPA ↔ tabelas PostgreSQL
-- Relacionamentos: `Event.owner` → `User`, `EventRegistration` → `Event` + `User`
-- Lifecycle callbacks (`@PrePersist`, `@PreUpdate`) para timestamps
-
-Exemplos: `User`, `Event`, `EventRegistration`
+- JPA mapping to PostgreSQL tables
+- Relationships: `Event.owner` → `User`, `EventRegistration` → `Event` + `User`
 
 ### DTO
 
-- Records imutáveis para request/response
-- Validação de entrada via Jakarta Validation
-- Factory methods estáticos (`EventResponse.from(event)`)
+- Immutable records for request/response
+- Jakarta Validation on input
+- Static factory methods (`EventResponse.from(event)`)
 
 ### Config
 
-- `SecurityConfig` — filter chain, rotas públicas, BCrypt
-- `OpenApiConfig` — metadados Swagger e scheme Bearer
-- `application.yml` — datasource, Flyway, JWT, SpringDoc
+- `SecurityConfig` — filter chain, public routes, BCrypt
+- `OpenApiConfig` — Swagger metadata and Bearer scheme
+- `application.yml` — datasource, Flyway, JWT, SpringDoc, Actuator
 
 ---
 
-## Fluxo básico de uma requisição
+## Basic request flow
 
-Exemplo: **criar evento autenticado**
+Example: **create authenticated event**
 
 ```text
-1. Cliente envia POST /events + Authorization: Bearer <jwt>
-
-2. JwtAuthenticationFilter
-   - Extrai token do header
-   - Valida assinatura e expiração
-   - Carrega UserDetails e popula SecurityContext
-
-3. Spring Security
-   - Verifica rota autenticada → permite
-
-4. EventController.create()
-   - Deserializa CreateEventRequest
-   - Bean Validation (título, datas, etc.)
-
-5. EventService.create()
-   - Obtém usuário via CurrentUserService
-   - Valida endDateTime >= startDateTime
-   - Cria Event com owner = usuário atual
-   - Persiste via EventRepository
-
-6. EventResponse.from(event) → JSON 201 Created
-```
-
-Exemplo: **dono lista participantes**
-
-```text
-RegistrationController → RegistrationService.listParticipants()
-  → verifica event.getOwner().id == currentUser.id
-  → senão: ForbiddenException (403)
-  → busca registrations CONFIRMED → ParticipantResponse
+1. Client sends POST /events + Authorization: Bearer <jwt>
+2. JwtAuthenticationFilter validates token and sets SecurityContext
+3. EventController.create() deserializes and validates CreateEventRequest
+4. EventService.create() assigns current user as owner and persists
+5. Returns EventResponse as JSON 201 Created
 ```
 
 ---
 
-## Versionamento do banco (Flyway)
+## Database versioning (Flyway)
 
-Migrations em `src/main/resources/db/migration/`:
+Migrations in `src/main/resources/db/migration/`:
 
-| Versão | Arquivo | Descrição |
-|--------|---------|-----------|
-| V1 | `V1__create_events_table.sql` | Tabela `events` + constraints de data e capacidade |
-| V2 | `V2__create_users_table.sql` | Tabela `users` + e-mail único |
-| V3 | `V3__add_owner_to_events.sql` | FK `owner_id` → `users` |
-| V4 | `V4__create_event_registrations_table.sql` | Tabela `event_registrations` + status |
-
-Configuração:
-
-```yaml
-spring.jpa.hibernate.ddl-auto: validate
-spring.flyway.enabled: true
-```
-
-O Hibernate **não altera** o schema em runtime — apenas valida que entidades correspondem às tabelas.
+| Version | File | Description |
+|---------|------|-------------|
+| V1 | `V1__create_events_table.sql` | `events` table |
+| V2 | `V2__create_users_table.sql` | `users` table |
+| V3 | `V3__add_owner_to_events.sql` | `owner_id` FK |
+| V4 | `V4__create_event_registrations_table.sql` | `event_registrations` table |
 
 ---
 
-## Segurança
+## Security
 
-### Rotas públicas
+### Public routes
 
-- `POST /auth/register`
-- `POST /auth/login`
-- Swagger / OpenAPI (`/swagger-ui/**`, `/api-docs/**`, `/v3/api-docs/**`)
+- `POST /auth/register`, `POST /auth/login`
+- `GET /actuator/health`
+- Swagger / OpenAPI paths
 
-### Rotas protegidas
+### Protected routes
 
-Todas as demais exigem JWT válido.
+All others require a valid JWT.
 
-### Autorização fine-grained
+### Fine-grained authorization
 
-Implementada nos **services**, não via `@PreAuthorize`:
+Implemented in **services**, not via `@PreAuthorize`:
 
-- Editar/excluir evento → dono
-- Ver participantes → dono
-- Inscrição → usuário autenticado (com regras de capacidade e status)
+- Update/delete event → owner only
+- View participants → owner only
+- Registration → authenticated user (with capacity and status rules)
 
----
+### Error responses
 
-## Testes (estado atual)
-
-| Tipo | Classe | Status |
-|------|--------|--------|
-| Contexto Spring (H2) | `EventHubApplicationTests` | Ativo |
-| Unitários | `AuthServiceTest`, `EventServiceTest`, `RegistrationServiceTest` | Ativo |
-| Integração (Testcontainers) | `EventHubFlowIT` | Ativo — requer Docker |
-| CI | `.github/workflows/ci.yml` | `mvn verify` no push/PR |
+`SecurityProblemHandler` returns JSON `ApiErrorResponse` for 401 and 403.
 
 ---
 
-## Possíveis evoluções arquiteturais
+## Tests (current state)
 
-Evoluções **planejadas**, não presentes hoje:
-
-| Evolução | Quando considerar |
-|----------|-------------------|
-| **Camada de mapper** (MapStruct) | Quando DTOs e entidades divergirem muito |
-| **Problem Details (RFC 7807)** | Padronizar erros HTTP de forma interoperável |
-| **CQRS / read models** | Se listagens ficarem complexas (filtros, agregações) |
-| **Event-driven** (publicar `EventCreated`) | Integrações assíncronas (e-mail, notificações) |
-| **Modular monolith** | Se o projeto crescer além de ~15–20 pacotes de domínio |
-| **API Gateway** | Múltiplos serviços ou autenticação centralizada externa |
-| **Cache (Redis)** | Listagens de alta leitura |
-| **Multi-tenancy** | Organizações distintas gerenciando eventos isolados |
+| Type | Class | Status |
+|------|-------|--------|
+| Spring context (H2) | `EventHubApplicationTests` | Active |
+| Unit tests | `AuthServiceTest`, `EventServiceTest`, `RegistrationServiceTest` | Active |
+| Integration (Testcontainers) | `EventHubFlowIT` | Active — requires Docker |
+| CI | `.github/workflows/ci.yml` | `mvn verify` on push/PR |
 
 ---
 
-## Referências
+## Possible architectural evolutions
+
+| Evolution | When to consider |
+|-----------|------------------|
+| **Mapper layer** (MapStruct) | When DTOs and entities diverge significantly |
+| **Problem Details (RFC 7807)** | Standardize HTTP errors interoperably |
+| **CQRS / read models** | Complex listings with filters and aggregations |
+| **Event-driven** | Async integrations (email, notifications) |
+| **Pagination** | Large event listings |
+
+---
+
+## References
 
 - [`README.md`](../README.md)
 - [`API.md`](API.md)
