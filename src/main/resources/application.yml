@@ -41,6 +41,7 @@ eventhub:
   jwt:
     secret: ${JWT_SECRET:change-me-use-a-long-secret-key-for-development-only-256bits}
     expiration-ms: ${JWT_EXPIRATION_MS:86400000}
+    refresh-expiration-ms: ${JWT_REFRESH_EXPIRATION_MS:604800000}
 
 management:
   endpoints:

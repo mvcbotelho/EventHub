@@ -22,5 +22,6 @@ public abstract class AbstractPostgresIntegrationTest {
         registry.add("spring.datasource.password", POSTGRES::getPassword);
         registry.add("eventhub.jwt.secret", () -> "test-secret-key-for-integration-tests-must-be-at-least-256-bits");
         registry.add("eventhub.jwt.expiration-ms", () -> "3600000");
+        registry.add("eventhub.jwt.refresh-expiration-ms", () -> "604800000");
     }
 }

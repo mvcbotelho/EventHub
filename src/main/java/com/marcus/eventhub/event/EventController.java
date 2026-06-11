@@ -1,14 +1,19 @@
 package com.marcus.eventhub.event;
 
+import com.marcus.eventhub.common.dto.PageResponse;
 import com.marcus.eventhub.event.dto.CreateEventRequest;
+import com.marcus.eventhub.event.dto.EventFilterParams;
 import com.marcus.eventhub.event.dto.EventResponse;
 import com.marcus.eventhub.event.dto.UpdateEventRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import java.util.List;
+import java.time.Instant;
 import java.util.UUID;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -18,6 +23,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -40,27 +46,51 @@ public class EventController {
     }
 
     @GetMapping
-    @Operation(summary = "List all events")
-    public List<EventResponse> findAll() {
-        return eventService.findAll();
+    @Operation(summary = "List all events (paginated, with optional filters)")
+    public PageResponse<EventResponse> findAll(
+            @RequestParam(required = false) String title,
+            @RequestParam(required = false) String location,
+            @RequestParam(required = false) Instant startFrom,
+            @RequestParam(required = false) Instant startTo,
+            @PageableDefault(size = 20, sort = "startDateTime", direction = Sort.Direction.ASC) Pageable pageable
+    ) {
+        return eventService.findAll(new EventFilterParams(title, location, startFrom, startTo), pageable);
     }
 
     @GetMapping("/mine")
     @Operation(summary = "List events created by the authenticated user")
-    public List<EventResponse> findMine() {
-        return eventService.findMine();
+    public PageResponse<EventResponse> findMine(
+            @RequestParam(required = false) String title,
+            @RequestParam(required = false) String location,
+            @RequestParam(required = false) Instant startFrom,
+            @RequestParam(required = false) Instant startTo,
+            @PageableDefault(size = 20, sort = "startDateTime", direction = Sort.Direction.ASC) Pageable pageable
+    ) {
+        return eventService.findMine(new EventFilterParams(title, location, startFrom, startTo), pageable);
     }
 
     @GetMapping("/this-week")
     @Operation(summary = "List events starting this week")
-    public List<EventResponse> findEventsThisWeek() {
-        return eventService.findEventsThisWeek();
+    public PageResponse<EventResponse> findEventsThisWeek(
+            @RequestParam(required = false) String title,
+            @RequestParam(required = false) String location,
+            @RequestParam(required = false) Instant startFrom,
+            @RequestParam(required = false) Instant startTo,
+            @PageableDefault(size = 20, sort = "startDateTime", direction = Sort.Direction.ASC) Pageable pageable
+    ) {
+        return eventService.findEventsThisWeek(new EventFilterParams(title, location, startFrom, startTo), pageable);
     }
 
     @GetMapping("/registered")
     @Operation(summary = "List events the authenticated user is registered for")
-    public List<EventResponse> findRegistered() {
-        return eventService.findRegistered();
+    public PageResponse<EventResponse> findRegistered(
+            @RequestParam(required = false) String title,
+            @RequestParam(required = false) String location,
+            @RequestParam(required = false) Instant startFrom,
+            @RequestParam(required = false) Instant startTo,
+            @PageableDefault(size = 20, sort = "startDateTime", direction = Sort.Direction.ASC) Pageable pageable
+    ) {
+        return eventService.findRegistered(new EventFilterParams(title, location, startFrom, startTo), pageable);
     }
 
     @GetMapping("/{id}")
@@ -76,7 +106,7 @@ public class EventController {
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Delete an event (owner only)")
+    @Operation(summary = "Soft-delete an event (owner only)")
     public ResponseEntity<Void> delete(@PathVariable UUID id) {
         eventService.delete(id);
         return ResponseEntity.noContent().build();

@@ -1,6 +1,7 @@
 package com.marcus.eventhub;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -49,7 +50,7 @@ class EventHubFlowIT extends AbstractPostgresIntegrationTest {
         mockMvc.perform(get("/events/registered")
                         .header("Authorization", "Bearer " + guestToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].id").value(eventId));
+                .andExpect(jsonPath("$.content[0].id").value(eventId));
     }
 
     @Test
@@ -94,15 +95,80 @@ class EventHubFlowIT extends AbstractPostgresIntegrationTest {
                 .andExpect(jsonPath("$.message").value("Only the event owner can perform this action"));
     }
 
-    private String registerAndLogin(String email, String name) throws Exception {
-        String registerBody = """
-                {"name":"%s","email":"%s","password":"123456"}
-                """.formatted(name, email);
+    @Test
+    void refreshTokenFlowShouldIssueNewAccessToken() throws Exception {
+        register("refresh@test.com", "Refresh User");
 
+        MvcResult loginResult = mockMvc.perform(post("/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email":"refresh@test.com","password":"123456"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.refreshToken").isNotEmpty())
+                .andReturn();
+
+        JsonNode loginJson = objectMapper.readTree(loginResult.getResponse().getContentAsString());
+        String refreshToken = loginJson.get("refreshToken").asText();
+
+        mockMvc.perform(post("/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"refreshToken":"%s"}
+                                """.formatted(refreshToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.token").isNotEmpty())
+                .andExpect(jsonPath("$.refreshToken").isNotEmpty());
+    }
+
+    @Test
+    void softDeletedEventShouldNotAppearInListings() throws Exception {
+        String ownerToken = registerAndLogin("soft-delete@test.com", "Soft Delete");
+
+        String eventId = createEvent(ownerToken);
+
+        mockMvc.perform(delete("/events/{id}", eventId)
+                        .header("Authorization", "Bearer " + ownerToken))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/events")
+                        .header("Authorization", "Bearer " + ownerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(0));
+
+        mockMvc.perform(get("/events/{id}", eventId)
+                        .header("Authorization", "Bearer " + ownerToken))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void eventListShouldSupportPaginationAndTitleFilter() throws Exception {
+        String token = registerAndLogin("filter@test.com", "Filter User");
+
+        createEvent(token, "Java Meetup", "SP");
+        createEvent(token, "Python Meetup", "RJ");
+
+        mockMvc.perform(get("/events")
+                        .param("title", "Java")
+                        .param("page", "0")
+                        .param("size", "10")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].title").value("Java Meetup"));
+    }
+
+    private void register(String email, String name) throws Exception {
         mockMvc.perform(post("/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(registerBody))
+                        .content("""
+                                {"name":"%s","email":"%s","password":"123456"}
+                                """.formatted(name, email)))
                 .andExpect(status().isCreated());
+    }
+
+    private String registerAndLogin(String email, String name) throws Exception {
+        register(email, name);
 
         MvcResult loginResult = mockMvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -118,18 +184,22 @@ class EventHubFlowIT extends AbstractPostgresIntegrationTest {
     }
 
     private String createEvent(String token) throws Exception {
+        return createEvent(token, "Integration Meetup", "SP");
+    }
+
+    private String createEvent(String token, String title, String location) throws Exception {
         Instant start = Instant.now().plusSeconds(86_400);
         Instant end = start.plusSeconds(7_200);
         String body = """
                 {
-                  "title": "Integration Meetup",
+                  "title": "%s",
                   "description": "Test",
-                  "location": "SP",
+                  "location": "%s",
                   "startDateTime": "%s",
                   "endDateTime": "%s",
                   "maxParticipants": 10
                 }
-                """.formatted(start, end);
+                """.formatted(title, location, start, end);
 
         MvcResult result = mockMvc.perform(post("/events")
                         .header("Authorization", "Bearer " + token)

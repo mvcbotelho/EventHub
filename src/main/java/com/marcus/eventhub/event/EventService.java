@@ -1,10 +1,12 @@
 package com.marcus.eventhub.event;
 
 import com.marcus.eventhub.auth.CurrentUserService;
+import com.marcus.eventhub.common.dto.PageResponse;
 import com.marcus.eventhub.common.exception.BusinessException;
 import com.marcus.eventhub.common.exception.ForbiddenException;
 import com.marcus.eventhub.common.exception.ResourceNotFoundException;
 import com.marcus.eventhub.event.dto.CreateEventRequest;
+import com.marcus.eventhub.event.dto.EventFilterParams;
 import com.marcus.eventhub.event.dto.EventResponse;
 import com.marcus.eventhub.event.dto.UpdateEventRequest;
 import com.marcus.eventhub.user.User;
@@ -12,9 +14,9 @@ import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.temporal.TemporalAdjusters;
-import java.util.List;
 import java.util.UUID;
-import org.springframework.data.jpa.repository.EntityGraph;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -48,17 +50,15 @@ public class EventService {
         return EventResponse.from(eventRepository.save(event));
     }
 
-    public List<EventResponse> findAll() {
-        return eventRepository.findAllWithOwner().stream()
-                .map(EventResponse::from)
-                .toList();
+    public PageResponse<EventResponse> findAll(EventFilterParams filter, Pageable pageable) {
+        return mapPage(eventRepository.findAll(EventSpecifications.withFilters(filter), pageable));
     }
 
     public EventResponse findById(UUID id) {
         return EventResponse.from(getEventOrThrow(id));
     }
 
-    public List<EventResponse> findEventsThisWeek() {
+    public PageResponse<EventResponse> findEventsThisWeek(EventFilterParams filter, Pageable pageable) {
         Instant weekStart = Instant.now()
                 .atZone(ZoneOffset.UTC)
                 .with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
@@ -66,28 +66,28 @@ public class EventService {
                 .atStartOfDay(ZoneOffset.UTC)
                 .toInstant();
 
-        Instant weekEnd = weekStart
-                .atZone(ZoneOffset.UTC)
-                .plusDays(7)
-                .toInstant();
+        Instant weekEnd = weekStart.atZone(ZoneOffset.UTC).plusDays(7).toInstant();
 
-        return eventRepository.findEventsStartingThisWeek(weekStart, weekEnd).stream()
-                .map(EventResponse::from)
-                .toList();
+        Specification<Event> spec = EventSpecifications.withFilters(filter)
+                .and(EventSpecifications.startingBetween(weekStart, weekEnd));
+
+        return mapPage(eventRepository.findAll(spec, pageable));
     }
 
-    public List<EventResponse> findMine() {
+    public PageResponse<EventResponse> findMine(EventFilterParams filter, Pageable pageable) {
         User currentUser = currentUserService.getCurrentUser();
-        return eventRepository.findByOwnerIdOrderByStartDateTimeAsc(currentUser.getId()).stream()
-                .map(EventResponse::from)
-                .toList();
+        Specification<Event> spec = EventSpecifications.withFilters(filter)
+                .and(EventSpecifications.ownedBy(currentUser.getId()));
+
+        return mapPage(eventRepository.findAll(spec, pageable));
     }
 
-    public List<EventResponse> findRegistered() {
+    public PageResponse<EventResponse> findRegistered(EventFilterParams filter, Pageable pageable) {
         User currentUser = currentUserService.getCurrentUser();
-        return eventRepository.findRegisteredEventsByUserId(currentUser.getId()).stream()
-                .map(EventResponse::from)
-                .toList();
+        Specification<Event> spec = EventSpecifications.withFilters(filter)
+                .and(EventSpecifications.registeredBy(currentUser.getId()));
+
+        return mapPage(eventRepository.findAll(spec, pageable));
     }
 
     @Transactional
@@ -111,12 +111,17 @@ public class EventService {
     public void delete(UUID id) {
         Event event = getEventOrThrow(id);
         assertOwner(event);
-        eventRepository.delete(event);
+        event.softDelete();
+        eventRepository.save(event);
     }
 
     public Event getEventOrThrow(UUID id) {
         return eventRepository.findByIdWithOwner(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Event not found"));
+    }
+
+    private PageResponse<EventResponse> mapPage(org.springframework.data.domain.Page<Event> page) {
+        return PageResponse.from(page, EventResponse::from);
     }
 
     private void assertOwner(Event event) {

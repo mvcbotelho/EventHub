@@ -111,6 +111,18 @@ class EventServiceTest {
     }
 
     @Test
+    void deleteShouldSoftDeleteForOwner() {
+        when(eventRepository.findByIdWithOwner(event.getId())).thenReturn(Optional.of(event));
+        when(currentUserService.getCurrentUser()).thenReturn(owner);
+        when(eventRepository.save(event)).thenReturn(event);
+
+        eventService.delete(event.getId());
+
+        assertThat(event.getDeletedAt()).isNotNull();
+        verify(eventRepository).save(event);
+    }
+
+    @Test
     void updateShouldRejectNonOwner() {
         when(eventRepository.findByIdWithOwner(event.getId())).thenReturn(Optional.of(event));
         when(currentUserService.getCurrentUser()).thenReturn(otherUser);

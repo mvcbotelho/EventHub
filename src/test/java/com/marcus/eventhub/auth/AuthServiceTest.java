@@ -11,6 +11,7 @@ import com.marcus.eventhub.auth.dto.RegisterRequest;
 import com.marcus.eventhub.common.exception.BusinessException;
 import com.marcus.eventhub.user.User;
 import com.marcus.eventhub.user.UserRepository;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -31,6 +32,9 @@ class AuthServiceTest {
 
     @Mock
     private JwtService jwtService;
+
+    @Mock
+    private RefreshTokenService refreshTokenService;
 
     @Mock
     private AuthenticationManager authenticationManager;
@@ -68,8 +72,11 @@ class AuthServiceTest {
     }
 
     @Test
-    void loginShouldReturnJwtToken() {
+    void loginShouldReturnAccessAndRefreshTokens() {
+        User user = new User("Marcus", "user@test.com", "hash");
+        when(userRepository.findByEmail("user@test.com")).thenReturn(Optional.of(user));
         when(jwtService.generateToken("user@test.com")).thenReturn("jwt-token");
+        when(refreshTokenService.createForUser(user)).thenReturn("refresh-token");
 
         LoginRequest request = new LoginRequest("user@test.com", "123456");
         var response = authService.login(request);
@@ -78,6 +85,7 @@ class AuthServiceTest {
                 new UsernamePasswordAuthenticationToken("user@test.com", "123456")
         );
         assertThat(response.token()).isEqualTo("jwt-token");
+        assertThat(response.refreshToken()).isEqualTo("refresh-token");
         assertThat(response.type()).isEqualTo("Bearer");
     }
 }

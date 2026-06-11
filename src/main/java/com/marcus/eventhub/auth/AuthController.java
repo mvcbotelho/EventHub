@@ -2,6 +2,7 @@ package com.marcus.eventhub.auth;
 
 import com.marcus.eventhub.auth.dto.AuthResponse;
 import com.marcus.eventhub.auth.dto.LoginRequest;
+import com.marcus.eventhub.auth.dto.RefreshTokenRequest;
 import com.marcus.eventhub.auth.dto.RegisterRequest;
 import com.marcus.eventhub.auth.dto.UserResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -35,9 +36,22 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    @Operation(summary = "Login and obtain a JWT")
+    @Operation(summary = "Login and obtain access and refresh tokens")
     public AuthResponse login(@Valid @RequestBody LoginRequest request) {
         return authService.login(request);
+    }
+
+    @PostMapping("/refresh")
+    @Operation(summary = "Exchange a refresh token for a new access token")
+    public AuthResponse refresh(@Valid @RequestBody RefreshTokenRequest request) {
+        return authService.refresh(request);
+    }
+
+    @PostMapping("/logout")
+    @Operation(summary = "Revoke a refresh token")
+    public ResponseEntity<Void> logout(@Valid @RequestBody RefreshTokenRequest request) {
+        authService.logout(request);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/me")
