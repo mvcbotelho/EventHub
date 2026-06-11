@@ -2,11 +2,29 @@ meta {
   name: EventHub API
 }
 
+vars {
+  baseUrl: http://localhost:8080
+  name: Marcus
+  email: marcus@email.com
+  password: 123456
+  token:
+  eventId:
+}
+
 docs {
   # EventHub API Collection
 
-  1. Select the **local** environment (top right)
+  ## Before your first request
+
+  Select environment **local** in the top-right dropdown (not "No Environment").
+  Editing variables in the Environments tab does NOT activate them — you must select **local** in the dropdown.
+
+  ## Flow
+
+  1. Select **local** environment (top right)
   2. Run **Auth > Register** (first time only)
   3. Run **Auth > Login** — saves `token` automatically
   4. Use **Events** and **Registrations** requests
+
+  Default `baseUrl`: http://localhost:8080
 }
