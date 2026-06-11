@@ -18,8 +18,19 @@ public class OpenApiConfig {
         return new OpenAPI()
                 .info(new Info()
                         .title("EventHub API")
-                        .description("REST API for creating, publishing, and joining events")
-                        .version("0.2.0")
+                        .description("""
+                                REST API for creating, publishing, and joining events.
+
+                                **Authentication:** register or login to obtain an access token and refresh token. \
+                                Use `POST /auth/refresh` to renew tokens without re-entering credentials. \
+                                `POST /auth/logout` revokes the refresh token.
+
+                                **Event listings:** all list endpoints return paginated `EventPageResponse` objects. \
+                                Use query params `page`, `size`, and `sort` (default: `startDateTime,asc`). \
+                                Optional filters: `title`, `location`, `startFrom`, `startTo`.
+
+                                **Soft delete:** `DELETE /events/{id}` hides the event from listings; it is not physically removed.""")
+                        .version("0.0.1-SNAPSHOT")
                         .contact(new Contact()
                                 .name("EventHub")
                                 .email("contato@eventhub.dev")))
@@ -32,7 +43,7 @@ public class OpenApiConfig {
                                 .scheme("bearer")
                                 .bearerFormat("JWT")
                                 .description("""
-                                        Paste only the token returned by POST /auth/login \
-                                        (do not include 'Bearer ' — Swagger adds it automatically).""")));
+                                        Paste only the **access token** returned by `POST /auth/login` or \
+                                        `POST /auth/refresh` (do not include `Bearer ` — Swagger adds it automatically).""")));
     }
 }

@@ -31,6 +31,9 @@ springdoc:
     persist-authorization: true
     try-it-out-enabled: true
     use-root-path: true
+    operations-sorter: method
+    tags-sorter: alpha
+  default-flat-param-object: true
 
 logging:
   level:

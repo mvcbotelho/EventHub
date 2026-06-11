@@ -1,16 +1,19 @@
 package com.marcus.eventhub.event;
 
-import com.marcus.eventhub.common.dto.PageResponse;
 import com.marcus.eventhub.event.dto.CreateEventRequest;
 import com.marcus.eventhub.event.dto.EventFilterParams;
+import com.marcus.eventhub.event.dto.EventPageResponse;
 import com.marcus.eventhub.event.dto.EventResponse;
 import com.marcus.eventhub.event.dto.UpdateEventRequest;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import java.time.Instant;
 import java.util.UUID;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -23,12 +26,11 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/events")
-@Tag(name = "Events", description = "Event operations")
+@Tag(name = "Events", description = "Event CRUD, paginated listings, and soft delete")
 @SecurityRequirement(name = "bearerAuth")
 public class EventController {
 
@@ -39,74 +41,93 @@ public class EventController {
     }
 
     @PostMapping
-    @Operation(summary = "Create an event")
+    @Operation(summary = "Create an event", description = "The authenticated user becomes the event owner.")
+    @ApiResponse(responseCode = "201", description = "Event created")
     public ResponseEntity<EventResponse> create(@Valid @RequestBody CreateEventRequest request) {
         EventResponse response = eventService.create(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @GetMapping
-    @Operation(summary = "List all events (paginated, with optional filters)")
-    public PageResponse<EventResponse> findAll(
-            @RequestParam(required = false) String title,
-            @RequestParam(required = false) String location,
-            @RequestParam(required = false) Instant startFrom,
-            @RequestParam(required = false) Instant startTo,
-            @PageableDefault(size = 20, sort = "startDateTime", direction = Sort.Direction.ASC) Pageable pageable
+    @Operation(
+            summary = "List all events",
+            description = "Returns a paginated list. Supports optional filters and Spring Data pagination (`page`, `size`, `sort`)."
+    )
+    @ApiResponse(
+            responseCode = "200",
+            description = "Paginated events",
+            content = @Content(schema = @Schema(implementation = EventPageResponse.class))
+    )
+    public EventPageResponse findAll(
+            @ParameterObject EventFilterParams filter,
+            @ParameterObject @PageableDefault(size = 20, sort = "startDateTime", direction = Sort.Direction.ASC) Pageable pageable
     ) {
-        return eventService.findAll(new EventFilterParams(title, location, startFrom, startTo), pageable);
+        return EventPageResponse.from(eventService.findAll(filter, pageable));
     }
 
     @GetMapping("/mine")
     @Operation(summary = "List events created by the authenticated user")
-    public PageResponse<EventResponse> findMine(
-            @RequestParam(required = false) String title,
-            @RequestParam(required = false) String location,
-            @RequestParam(required = false) Instant startFrom,
-            @RequestParam(required = false) Instant startTo,
-            @PageableDefault(size = 20, sort = "startDateTime", direction = Sort.Direction.ASC) Pageable pageable
+    @ApiResponse(
+            responseCode = "200",
+            content = @Content(schema = @Schema(implementation = EventPageResponse.class))
+    )
+    public EventPageResponse findMine(
+            @ParameterObject EventFilterParams filter,
+            @ParameterObject @PageableDefault(size = 20, sort = "startDateTime", direction = Sort.Direction.ASC) Pageable pageable
     ) {
-        return eventService.findMine(new EventFilterParams(title, location, startFrom, startTo), pageable);
+        return EventPageResponse.from(eventService.findMine(filter, pageable));
     }
 
     @GetMapping("/this-week")
-    @Operation(summary = "List events starting this week")
-    public PageResponse<EventResponse> findEventsThisWeek(
-            @RequestParam(required = false) String title,
-            @RequestParam(required = false) String location,
-            @RequestParam(required = false) Instant startFrom,
-            @RequestParam(required = false) Instant startTo,
-            @PageableDefault(size = 20, sort = "startDateTime", direction = Sort.Direction.ASC) Pageable pageable
+    @Operation(
+            summary = "List events starting this week",
+            description = "Week starts Monday 00:00 UTC. Same pagination and filters as `GET /events`."
+    )
+    @ApiResponse(
+            responseCode = "200",
+            content = @Content(schema = @Schema(implementation = EventPageResponse.class))
+    )
+    public EventPageResponse findEventsThisWeek(
+            @ParameterObject EventFilterParams filter,
+            @ParameterObject @PageableDefault(size = 20, sort = "startDateTime", direction = Sort.Direction.ASC) Pageable pageable
     ) {
-        return eventService.findEventsThisWeek(new EventFilterParams(title, location, startFrom, startTo), pageable);
+        return EventPageResponse.from(eventService.findEventsThisWeek(filter, pageable));
     }
 
     @GetMapping("/registered")
     @Operation(summary = "List events the authenticated user is registered for")
-    public PageResponse<EventResponse> findRegistered(
-            @RequestParam(required = false) String title,
-            @RequestParam(required = false) String location,
-            @RequestParam(required = false) Instant startFrom,
-            @RequestParam(required = false) Instant startTo,
-            @PageableDefault(size = 20, sort = "startDateTime", direction = Sort.Direction.ASC) Pageable pageable
+    @ApiResponse(
+            responseCode = "200",
+            content = @Content(schema = @Schema(implementation = EventPageResponse.class))
+    )
+    public EventPageResponse findRegistered(
+            @ParameterObject EventFilterParams filter,
+            @ParameterObject @PageableDefault(size = 20, sort = "startDateTime", direction = Sort.Direction.ASC) Pageable pageable
     ) {
-        return eventService.findRegistered(new EventFilterParams(title, location, startFrom, startTo), pageable);
+        return EventPageResponse.from(eventService.findRegistered(filter, pageable));
     }
 
     @GetMapping("/{id}")
     @Operation(summary = "Get event by ID")
+    @ApiResponse(responseCode = "200", description = "Event details")
+    @ApiResponse(responseCode = "404", description = "Event not found or soft-deleted")
     public EventResponse findById(@PathVariable UUID id) {
         return eventService.findById(id);
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Update an event (owner only)")
+    @Operation(summary = "Update an event", description = "Owner only.")
+    @ApiResponse(responseCode = "403", description = "Not the event owner")
     public EventResponse update(@PathVariable UUID id, @Valid @RequestBody UpdateEventRequest request) {
         return eventService.update(id, request);
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Soft-delete an event (owner only)")
+    @Operation(
+            summary = "Soft-delete an event",
+            description = "Owner only. The event is hidden from listings and returns 404 on direct lookup."
+    )
+    @ApiResponse(responseCode = "204", description = "Event soft-deleted")
     public ResponseEntity<Void> delete(@PathVariable UUID id) {
         eventService.delete(id);
         return ResponseEntity.noContent().build();
