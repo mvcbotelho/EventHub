@@ -160,7 +160,7 @@ class EventHubFlowIT extends AbstractPostgresIntegrationTest {
 
     @Test
     void prometheusEndpointShouldBePublic() throws Exception {
-        mockMvc.perform(get("/actuator/prometheus"))
+        mockMvc.perform(get("/actuator/prometheus").accept(MediaType.TEXT_PLAIN))
                 .andExpect(status().isOk())
                 .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content()
                         .string(org.hamcrest.Matchers.containsString("jvm_memory_used_bytes")));

@@ -73,6 +73,12 @@ management:
   endpoint:
     health:
       show-details: never
+      access: unrestricted
+    prometheus:
+      access: unrestricted
+  health:
+    mail:
+      enabled: false
   metrics:
     tags:
       application: ${spring.application.name}

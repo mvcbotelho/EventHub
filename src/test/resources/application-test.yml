@@ -21,3 +21,8 @@ eventhub:
     enabled: false
   mail:
     enabled: false
+
+management:
+  health:
+    mail:
+      enabled: false

@@ -25,5 +25,6 @@ public abstract class AbstractPostgresIntegrationTest {
         registry.add("eventhub.jwt.refresh-expiration-ms", () -> "604800000");
         registry.add("eventhub.rate-limit.enabled", () -> "false");
         registry.add("eventhub.mail.enabled", () -> "false");
+        registry.add("management.health.mail.enabled", () -> "false");
     }
 }
