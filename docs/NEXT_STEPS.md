@@ -6,24 +6,22 @@ Planning document for evolving the project after the functional MVP.
 
 ## Current state
 
-**EventHub API** is at `0.0.1-SNAPSHOT` with the main flow implemented:
+**EventHub API** is at `0.0.1-SNAPSHOT` with the main flow and scale features implemented:
 
-- users register and authenticate via JWT with refresh tokens;
-- authenticated users create and manage events (soft delete);
-- paginated and filterable event listings;
-- other users register for events;
-- owners view participants;
-- environment runs entirely via Docker Compose with app healthcheck;
-- interactive Swagger documentation;
-- Bruno collection for manual testing;
-- unit and integration tests with CI;
-- structured JSON logging in non-test profiles.
+- JWT authentication with refresh tokens;
+- paginated and filterable event listings with soft delete;
+- event registrations with schedule conflict validation;
+- owner-only updates blocked when registrants exist;
+- rate limiting on auth and registration endpoints;
+- Prometheus metrics via Actuator;
+- email notifications on registration (MailHog in Docker Compose);
+- structured JSON logging, CI, and Testcontainers integration tests.
 
 **Not yet implemented:**
 
-- rate limiting;
-- full observability stack (metrics, tracing);
-- email notifications on registration.
+- distributed rate limiting (Redis);
+- full observability stack (tracing, dashboards);
+- advanced notification channels (SMS, push).
 
 ---
 
@@ -52,38 +50,35 @@ Planning document for evolving the project after the functional MVP.
 
 ### Phase 6 — Quality, tests, and reliability
 
-- [x] Unit tests: `AuthServiceTest`, `EventServiceTest`, `RegistrationServiceTest`
-- [x] Integration tests with Testcontainers (`EventHubFlowIT`)
-- [x] MockMvc: full flow, 401/403 JSON, public health
-- [x] JSON error responses for 401/403 (`SecurityProblemHandler`)
-- [x] Spring Boot Actuator (`GET /actuator/health`)
-- [x] GitHub Actions CI (`.github/workflows/ci.yml`)
-- [x] English API messages and documentation
+- [x] Unit and integration tests, CI, Actuator health, JSON error responses
 
 ### Phase 7 — Product evolution and observability
 
-- [x] Pagination on event listings (`PageResponse`, default size 20)
-- [x] Filters by title, location, and start date range
-- [x] Refresh token (`POST /auth/refresh`, `POST /auth/logout`)
-- [x] Docker Compose healthcheck for the `app` service (Actuator)
-- [x] Structured JSON logging (`logstash-logback-encoder`)
-- [x] Soft delete for events (`deleted_at` column)
+- [x] Pagination, filters, refresh token, soft delete, Docker healthcheck, JSON logging
+
+### Phase 8 — Scale and notifications
+
+- [x] Rate limiting (Bucket4j) on auth and registration endpoints
+- [x] Prometheus metrics (`GET /actuator/prometheus`, custom registration counter)
+- [x] Email notifications on registration (SMTP via MailHog in Docker)
+- [x] User schedule conflict validation
+- [x] Block event edit when confirmed registrants exist
 
 ---
 
 ## Recommended next phase
 
-### Phase 8 — Scale and notifications
+### Phase 9 — Production hardening
 
-1. **Rate limiting** on auth and registration endpoints
-2. **Metrics** via Actuator/Prometheus
-3. **Email notifications** on registration
-4. **User schedule conflict** validation
-5. **Block edit** when event has registrants
+1. **Distributed rate limiting** with Redis
+2. **OpenTelemetry tracing** and Grafana dashboards
+3. **Role-based access** (admin vs user)
+4. **Event categories/tags**
+5. **Waitlist** when events are full
 
 ---
 
-## Pending business rules
+## Business rules
 
 | Rule | Status |
 |------|--------|
@@ -97,10 +92,11 @@ Planning document for evolving the project after the functional MVP.
 | Full event blocks registration | Implemented |
 | Owner cannot register for own event | Implemented |
 | Re-register after cancel | Implemented |
-| Pagination | Implemented |
-| Soft delete | Implemented |
-| User schedule conflict validation | **Planned / TBD** |
-| Block edit when event has registrants | **Planned / TBD** |
+| Pagination and soft delete | Implemented |
+| Schedule conflict validation | Implemented |
+| Block edit with confirmed registrants | Implemented |
+| Rate limiting on sensitive endpoints | Implemented |
+| Registration email notification | Implemented (when mail enabled) |
 
 ---
 
@@ -108,8 +104,8 @@ Planning document for evolving the project after the functional MVP.
 
 - [ ] Read [`ARCHITECTURE.md`](ARCHITECTURE.md) and [`API.md`](API.md)
 - [ ] Start environment: `docker compose up --build`
-- [ ] Validate flow in Bruno or Swagger
-- [ ] Pick first Phase 8 task
+- [ ] Open MailHog UI at http://localhost:8025 after registering for an event
+- [ ] Pick first Phase 9 task
 - [ ] Update this document when items are done
 
 ---

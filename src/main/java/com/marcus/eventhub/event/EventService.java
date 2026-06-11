@@ -9,6 +9,8 @@ import com.marcus.eventhub.event.dto.CreateEventRequest;
 import com.marcus.eventhub.event.dto.EventFilterParams;
 import com.marcus.eventhub.event.dto.EventResponse;
 import com.marcus.eventhub.event.dto.UpdateEventRequest;
+import com.marcus.eventhub.registration.EventRegistrationRepository;
+import com.marcus.eventhub.registration.RegistrationStatus;
 import com.marcus.eventhub.user.User;
 import java.time.DayOfWeek;
 import java.time.Instant;
@@ -25,10 +27,16 @@ import org.springframework.transaction.annotation.Transactional;
 public class EventService {
 
     private final EventRepository eventRepository;
+    private final EventRegistrationRepository registrationRepository;
     private final CurrentUserService currentUserService;
 
-    public EventService(EventRepository eventRepository, CurrentUserService currentUserService) {
+    public EventService(
+            EventRepository eventRepository,
+            EventRegistrationRepository registrationRepository,
+            CurrentUserService currentUserService
+    ) {
         this.eventRepository = eventRepository;
+        this.registrationRepository = registrationRepository;
         this.currentUserService = currentUserService;
     }
 
@@ -96,6 +104,7 @@ public class EventService {
 
         Event event = getEventOrThrow(id);
         assertOwner(event);
+        assertNoConfirmedRegistrants(id);
 
         event.setTitle(request.title());
         event.setDescription(request.description());
@@ -128,6 +137,13 @@ public class EventService {
         User currentUser = currentUserService.getCurrentUser();
         if (!event.getOwner().getId().equals(currentUser.getId())) {
             throw new ForbiddenException("Only the event owner can perform this action");
+        }
+    }
+
+    private void assertNoConfirmedRegistrants(UUID eventId) {
+        long confirmedCount = registrationRepository.countByEventIdAndStatus(eventId, RegistrationStatus.CONFIRMED);
+        if (confirmedCount > 0) {
+            throw new BusinessException("Cannot update an event that has confirmed registrations");
         }
     }
 

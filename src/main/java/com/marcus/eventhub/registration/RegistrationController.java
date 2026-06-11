@@ -29,7 +29,14 @@ public class RegistrationController {
     }
 
     @PostMapping("/registrations")
-    @Operation(summary = "Register for an event")
+    @Operation(
+            summary = "Register for an event",
+            description = "Sends a confirmation email when mail is enabled. Rejects overlapping schedules."
+    )
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "400",
+            description = "Business rule violation (full event, schedule conflict, etc.)"
+    )
     public ResponseEntity<RegistrationResponse> register(@PathVariable UUID eventId) {
         RegistrationResponse response = registrationService.register(eventId);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);

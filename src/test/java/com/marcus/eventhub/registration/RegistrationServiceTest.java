@@ -1,20 +1,22 @@
 package com.marcus.eventhub.registration;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.marcus.eventhub.auth.CurrentUserService;
 import com.marcus.eventhub.common.exception.BusinessException;
 import com.marcus.eventhub.event.Event;
 import com.marcus.eventhub.event.EventService;
+import com.marcus.eventhub.notification.RegistrationNotificationService;
 import com.marcus.eventhub.user.User;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -30,7 +32,9 @@ class RegistrationServiceTest {
     @Mock
     private CurrentUserService currentUserService;
 
-    @InjectMocks
+    @Mock
+    private RegistrationNotificationService notificationService;
+
     private RegistrationService registrationService;
 
     private User owner;
@@ -40,6 +44,14 @@ class RegistrationServiceTest {
 
     @BeforeEach
     void setUp() {
+        registrationService = new RegistrationService(
+                registrationRepository,
+                eventService,
+                currentUserService,
+                notificationService,
+                new SimpleMeterRegistry()
+        );
+
         owner = new User("Owner", "owner@test.com", "hash");
         participant = new User("Guest", "guest@test.com", "hash");
         event = new Event(
@@ -70,6 +82,9 @@ class RegistrationServiceTest {
 
         when(eventService.getEventOrThrow(eventId)).thenReturn(event);
         when(currentUserService.getCurrentUser()).thenReturn(participant);
+        when(registrationRepository.existsOverlappingConfirmedRegistration(
+                participant.getId(), eventId, event.getStartDateTime(), event.getEndDateTime()))
+                .thenReturn(false);
         when(registrationRepository.findByEventIdAndUserId(eventId, participant.getId()))
                 .thenReturn(Optional.of(existing));
 
@@ -82,6 +97,9 @@ class RegistrationServiceTest {
     void registerShouldRejectFullEvent() {
         when(eventService.getEventOrThrow(eventId)).thenReturn(event);
         when(currentUserService.getCurrentUser()).thenReturn(participant);
+        when(registrationRepository.existsOverlappingConfirmedRegistration(
+                participant.getId(), eventId, event.getStartDateTime(), event.getEndDateTime()))
+                .thenReturn(false);
         when(registrationRepository.findByEventIdAndUserId(eventId, participant.getId()))
                 .thenReturn(Optional.empty());
         when(registrationRepository.countByEventIdAndStatus(eventId, RegistrationStatus.CONFIRMED))
@@ -110,5 +128,37 @@ class RegistrationServiceTest {
         assertThatThrownBy(() -> registrationService.register(endedEvent.getId()))
                 .isInstanceOf(BusinessException.class)
                 .hasMessage("Cannot register for an event that has already ended");
+    }
+
+    @Test
+    void registerShouldRejectOverlappingSchedule() {
+        when(eventService.getEventOrThrow(eventId)).thenReturn(event);
+        when(currentUserService.getCurrentUser()).thenReturn(participant);
+        when(registrationRepository.existsOverlappingConfirmedRegistration(
+                participant.getId(), eventId, event.getStartDateTime(), event.getEndDateTime()))
+                .thenReturn(true);
+
+        assertThatThrownBy(() -> registrationService.register(eventId))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("You already have a confirmed registration for an overlapping event");
+    }
+
+    @Test
+    void registerShouldNotifyOnSuccess() {
+        when(eventService.getEventOrThrow(eventId)).thenReturn(event);
+        when(currentUserService.getCurrentUser()).thenReturn(participant);
+        when(registrationRepository.existsOverlappingConfirmedRegistration(
+                participant.getId(), eventId, event.getStartDateTime(), event.getEndDateTime()))
+                .thenReturn(false);
+        when(registrationRepository.findByEventIdAndUserId(eventId, participant.getId()))
+                .thenReturn(Optional.empty());
+        when(registrationRepository.countByEventIdAndStatus(eventId, RegistrationStatus.CONFIRMED))
+                .thenReturn(0L);
+        when(registrationRepository.save(org.mockito.ArgumentMatchers.any(EventRegistration.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        registrationService.register(eventId);
+
+        verify(notificationService).notifyRegistrationConfirmed(event, participant);
     }
 }

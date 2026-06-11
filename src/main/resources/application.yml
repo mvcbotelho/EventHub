@@ -20,6 +20,16 @@ spring:
     enabled: true
     locations: classpath:db/migration
 
+  mail:
+    host: ${SPRING_MAIL_HOST:localhost}
+    port: ${SPRING_MAIL_PORT:1025}
+    properties:
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: false
+
 server:
   port: ${SERVER_PORT:8080}
 
@@ -45,13 +55,24 @@ eventhub:
     secret: ${JWT_SECRET:change-me-use-a-long-secret-key-for-development-only-256bits}
     expiration-ms: ${JWT_EXPIRATION_MS:86400000}
     refresh-expiration-ms: ${JWT_REFRESH_EXPIRATION_MS:604800000}
+  rate-limit:
+    enabled: ${RATE_LIMIT_ENABLED:true}
+    auth-capacity: ${RATE_LIMIT_AUTH_CAPACITY:10}
+    auth-refill-per-minutes: ${RATE_LIMIT_AUTH_REFILL_MINUTES:1}
+    registration-capacity: ${RATE_LIMIT_REGISTRATION_CAPACITY:30}
+    registration-refill-per-minutes: ${RATE_LIMIT_REGISTRATION_REFILL_MINUTES:1}
+  mail:
+    enabled: ${MAIL_ENABLED:false}
+    from: ${MAIL_FROM:noreply@eventhub.local}
 
 management:
   endpoints:
     web:
       exposure:
-        include: health
+        include: health,prometheus
   endpoint:
     health:
       show-details: never
-
+  metrics:
+    tags:
+      application: ${spring.application.name}

@@ -11,6 +11,8 @@ import com.marcus.eventhub.common.exception.BusinessException;
 import com.marcus.eventhub.common.exception.ForbiddenException;
 import com.marcus.eventhub.event.dto.CreateEventRequest;
 import com.marcus.eventhub.event.dto.UpdateEventRequest;
+import com.marcus.eventhub.registration.EventRegistrationRepository;
+import com.marcus.eventhub.registration.RegistrationStatus;
 import com.marcus.eventhub.user.User;
 import java.time.Instant;
 import java.util.Optional;
@@ -27,6 +29,9 @@ class EventServiceTest {
 
     @Mock
     private EventRepository eventRepository;
+
+    @Mock
+    private EventRegistrationRepository registrationRepository;
 
     @Mock
     private CurrentUserService currentUserService;
@@ -91,9 +96,11 @@ class EventServiceTest {
     }
 
     @Test
-    void updateShouldAllowOwner() {
+    void updateShouldAllowOwnerWhenNoRegistrants() {
         when(eventRepository.findByIdWithOwner(event.getId())).thenReturn(Optional.of(event));
         when(currentUserService.getCurrentUser()).thenReturn(owner);
+        when(registrationRepository.countByEventIdAndStatus(event.getId(), RegistrationStatus.CONFIRMED))
+                .thenReturn(0L);
 
         UpdateEventRequest request = new UpdateEventRequest(
                 "Updated",
@@ -108,6 +115,27 @@ class EventServiceTest {
 
         assertThat(response.title()).isEqualTo("Updated");
         assertThat(response.location()).isEqualTo("RJ");
+    }
+
+    @Test
+    void updateShouldRejectWhenEventHasConfirmedRegistrants() {
+        when(eventRepository.findByIdWithOwner(event.getId())).thenReturn(Optional.of(event));
+        when(currentUserService.getCurrentUser()).thenReturn(owner);
+        when(registrationRepository.countByEventIdAndStatus(event.getId(), RegistrationStatus.CONFIRMED))
+                .thenReturn(2L);
+
+        UpdateEventRequest request = new UpdateEventRequest(
+                "Updated",
+                "Desc",
+                "RJ",
+                Instant.parse("2026-12-15T19:00:00Z"),
+                Instant.parse("2026-12-15T21:00:00Z"),
+                10
+        );
+
+        assertThatThrownBy(() -> eventService.update(event.getId(), request))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("Cannot update an event that has confirmed registrations");
     }
 
     @Test

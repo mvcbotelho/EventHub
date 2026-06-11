@@ -16,12 +16,21 @@ services:
       timeout: 5s
       retries: 10
 
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: eventhub-mailhog
+    ports:
+      - "${MAILHOG_SMTP_PORT:-1025}:1025"
+      - "${MAILHOG_UI_PORT:-8025}:8025"
+
   app:
     build: .
     container_name: eventhub-api
     depends_on:
       postgres:
         condition: service_healthy
+      mailhog:
+        condition: service_started
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-eventhub}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-eventhub}
@@ -30,6 +39,10 @@ services:
       JWT_SECRET: ${JWT_SECRET:-change-me-use-a-long-secret-key-for-development-only-256bits}
       JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-86400000}
       JWT_REFRESH_EXPIRATION_MS: ${JWT_REFRESH_EXPIRATION_MS:-604800000}
+      MAIL_ENABLED: ${MAIL_ENABLED:-true}
+      MAIL_FROM: ${MAIL_FROM:-noreply@eventhub.local}
+      SPRING_MAIL_HOST: mailhog
+      SPRING_MAIL_PORT: 1025
     ports:
       - "${APP_PORT:-8080}:8080"
     healthcheck:

@@ -116,8 +116,12 @@ public class EventController {
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Update an event", description = "Owner only.")
+    @Operation(
+            summary = "Update an event",
+            description = "Owner only. Blocked when the event has confirmed registrations."
+    )
     @ApiResponse(responseCode = "403", description = "Not the event owner")
+    @ApiResponse(responseCode = "400", description = "Event has confirmed registrations")
     public EventResponse update(@PathVariable UUID id, @Valid @RequestBody UpdateEventRequest request) {
         return eventService.update(id, request);
     }

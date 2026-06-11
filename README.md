@@ -28,7 +28,9 @@ The focus is hands-on backend learning, solid architecture practices, and evolva
 | PostgreSQL 16 | Database |
 | Flyway | Schema versioning |
 | SpringDoc OpenAPI | Interactive docs (Swagger) |
-| Spring Boot Actuator | Health checks |
+| Spring Boot Actuator | Health checks and Prometheus metrics |
+| Bucket4j | Rate limiting |
+| Spring Mail + MailHog | Registration email notifications (dev) |
 | Logstash Logback Encoder | Structured JSON logging |
 | Docker + Docker Compose | Runtime environment |
 | JUnit + Testcontainers | Automated tests |
@@ -52,9 +54,16 @@ The focus is hands-on backend learning, solid architecture practices, and evolva
 - Update and soft-delete restricted to event owner
 
 ### Registrations
-- Event registration
+- Event registration with email confirmation (when mail enabled)
+- Schedule conflict validation (no overlapping confirmed events)
 - Cancel own registration
 - List participants (event owner only)
+
+### Scale and reliability
+- Rate limiting on auth and registration endpoints (Bucket4j, per IP)
+- Prometheus metrics (`GET /actuator/prometheus`)
+- Email notifications via SMTP (MailHog in Docker Compose)
+- Block event updates when confirmed registrants exist
 
 ### Infrastructure and quality
 - Docker-first (`Dockerfile` + `docker-compose.yml`) with healthchecks on `postgres` and `app`
@@ -73,11 +82,10 @@ The focus is hands-on backend learning, solid architecture practices, and evolva
 
 See the detailed roadmap in [`docs/NEXT_STEPS.md`](docs/NEXT_STEPS.md). Summary:
 
-- Rate limiting
-- Metrics and tracing (Prometheus, etc.)
-- Email notifications on registration
-- User schedule conflict validation
-- Block event edits when registrants exist
+- Distributed rate limiting (Redis)
+- OpenTelemetry tracing and dashboards
+- Role-based access and event categories
+- Waitlist for full events
 
 ## Project structure
 
@@ -152,6 +160,8 @@ docker compose down -v
 |----------|-----|
 | Base URL (local) | http://localhost:8080 |
 | Health check | http://localhost:8080/actuator/health |
+| Prometheus | http://localhost:8080/actuator/prometheus |
+| MailHog UI (Docker) | http://localhost:8025 |
 | Swagger UI | http://localhost:8080/swagger-ui.html |
 | OpenAPI JSON | http://localhost:8080/api-docs |
 
@@ -199,6 +209,10 @@ Defined in `.env.example` and used by `docker-compose.yml`:
 | `JWT_SECRET` | *(dev default)* | HMAC key for JWT signing |
 | `JWT_EXPIRATION_MS` | `86400000` | Access token expiration (24h) |
 | `JWT_REFRESH_EXPIRATION_MS` | `604800000` | Refresh token expiration (7d) |
+| `RATE_LIMIT_ENABLED` | `true` | Enable/disable rate limiting |
+| `MAIL_ENABLED` | `true` in Docker | Send registration emails via SMTP |
+| `MAIL_FROM` | `noreply@eventhub.local` | Sender address |
+| `MAILHOG_UI_PORT` | `8025` | MailHog web UI port |
 
 > **Warning:** change `JWT_SECRET` in real environments. The default is for local development only.
 
@@ -269,6 +283,11 @@ Event listings return a `PageResponse` object (`content`, `page`, `size`, `total
 | Event ownership | Done |
 | Registrations | Done |
 | Pagination and filters | Done |
+| Rate limiting | Done |
+| Prometheus metrics | Done |
+| Registration emails | Done (MailHog in Docker) |
+| Schedule conflict validation | Done |
+| Block edit with registrants | Done |
 | Swagger/OpenAPI | Done |
 | Bruno collection | Done |
 | Automated tests | Unit + integration (Testcontainers) |
@@ -289,7 +308,8 @@ Event listings return a `PageResponse` object (`content`, `page`, `size`, `total
 | 5 | Bruno collection | Done |
 | 6 | Tests, CI/CD, observability | Done |
 | 7 | Pagination, filters, refresh token, soft delete | Done |
-| 8 | Rate limiting, metrics, notifications | **Next** |
+| 8 | Rate limiting, metrics, email, business rules | Done |
+| 9 | Production hardening (Redis, tracing, RBAC) | **Next** |
 
 Details in [`docs/NEXT_STEPS.md`](docs/NEXT_STEPS.md).
 

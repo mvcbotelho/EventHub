@@ -158,6 +158,70 @@ class EventHubFlowIT extends AbstractPostgresIntegrationTest {
                 .andExpect(jsonPath("$.content[0].title").value("Java Meetup"));
     }
 
+    @Test
+    void prometheusEndpointShouldBePublic() throws Exception {
+        mockMvc.perform(get("/actuator/prometheus"))
+                .andExpect(status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content()
+                        .string(org.hamcrest.Matchers.containsString("jvm_memory_used_bytes")));
+    }
+
+    @Test
+    void registerShouldRejectOverlappingSchedule() throws Exception {
+        String ownerToken = registerAndLogin("overlap-owner@test.com", "Overlap Owner");
+        String guestToken = registerAndLogin("overlap-guest@test.com", "Overlap Guest");
+
+        Instant startA = Instant.now().plusSeconds(86_400);
+        Instant endA = startA.plusSeconds(7_200);
+        String eventA = createEvent(ownerToken, "Morning Meetup", "SP", startA, endA);
+
+        Instant startB = startA.plusSeconds(3_600);
+        Instant endB = startB.plusSeconds(7_200);
+        String eventB = createEvent(ownerToken, "Overlapping Meetup", "SP", startB, endB);
+
+        mockMvc.perform(post("/events/{eventId}/registrations", eventA)
+                        .header("Authorization", "Bearer " + guestToken))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(post("/events/{eventId}/registrations", eventB)
+                        .header("Authorization", "Bearer " + guestToken))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message")
+                        .value("You already have a confirmed registration for an overlapping event"));
+    }
+
+    @Test
+    void updateShouldBeBlockedWhenEventHasRegistrants() throws Exception {
+        String ownerToken = registerAndLogin("update-block-owner@test.com", "Update Block Owner");
+        String guestToken = registerAndLogin("update-block-guest@test.com", "Update Block Guest");
+        String eventId = createEvent(ownerToken);
+
+        mockMvc.perform(post("/events/{eventId}/registrations", eventId)
+                        .header("Authorization", "Bearer " + guestToken))
+                .andExpect(status().isCreated());
+
+        Instant start = Instant.now().plusSeconds(86_400);
+        Instant end = start.plusSeconds(7_200);
+        String body = """
+                {
+                  "title": "Updated Title",
+                  "description": "Test",
+                  "location": "RJ",
+                  "startDateTime": "%s",
+                  "endDateTime": "%s",
+                  "maxParticipants": 10
+                }
+                """.formatted(start, end);
+
+        mockMvc.perform(put("/events/{id}", eventId)
+                        .header("Authorization", "Bearer " + ownerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message")
+                        .value("Cannot update an event that has confirmed registrations"));
+    }
+
     private void register(String email, String name) throws Exception {
         mockMvc.perform(post("/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -190,6 +254,10 @@ class EventHubFlowIT extends AbstractPostgresIntegrationTest {
     private String createEvent(String token, String title, String location) throws Exception {
         Instant start = Instant.now().plusSeconds(86_400);
         Instant end = start.plusSeconds(7_200);
+        return createEvent(token, title, location, start, end);
+    }
+
+    private String createEvent(String token, String title, String location, Instant start, Instant end) throws Exception {
         String body = """
                 {
                   "title": "%s",

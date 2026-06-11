@@ -14,6 +14,8 @@ Documentation for endpoints **currently implemented** in the codebase.
 | Interactive docs | http://localhost:8080/swagger-ui.html |
 | OpenAPI JSON | http://localhost:8080/api-docs |
 | Health check | http://localhost:8080/actuator/health |
+| Prometheus metrics | http://localhost:8080/actuator/prometheus |
+| MailHog UI (local Docker) | http://localhost:8025 |
 
 ### Authentication
 
@@ -24,6 +26,7 @@ Public routes (no token):
 - `POST /auth/refresh`
 - `POST /auth/logout`
 - `GET /actuator/health`
+- `GET /actuator/prometheus`
 
 All other routes require:
 
@@ -54,7 +57,17 @@ Errors handled by `GlobalExceptionHandler` and `SecurityProblemHandler`:
 | `401` | Not authenticated or invalid credentials |
 | `403` | Authenticated but not authorized |
 | `404` | Resource not found |
+| `429` | Rate limit exceeded |
 | `500` | Internal server error |
+
+### Rate limiting
+
+Applied per client IP (supports `X-Forwarded-For`) on:
+
+- `POST /auth/register`, `/auth/login`, `/auth/refresh` — default **10 requests/minute**
+- `POST /events/{eventId}/registrations` — default **30 requests/minute**
+
+Configure via `RATE_LIMIT_*` environment variables. Returns `429` with `"Too many requests. Please try again later."`
 
 ---
 
@@ -283,6 +296,7 @@ Updates an event. **Owner only.**
 **Common errors:**
 
 - `403` — `"Only the event owner can perform this action"`
+- `400` — `"Cannot update an event that has confirmed registrations"`
 - `404` — `"Event not found"`
 
 ---
@@ -316,6 +330,8 @@ Registers the authenticated user for an event.
 - Full events **block** new registrations
 - Duplicate `CONFIRMED` registration returns error
 - Existing `CANCELED` registration is **reactivated**
+- Overlapping `CONFIRMED` registrations for the same user are **rejected**
+- Sends a confirmation **email** when `MAIL_ENABLED=true`
 
 **Common errors:**
 
@@ -323,6 +339,8 @@ Registers the authenticated user for an event.
 - `400` — `"Cannot register for an event that has already ended"`
 - `400` — `"User is already registered for this event"`
 - `400` — `"Event is full"`
+- `400` — `"You already have a confirmed registration for an overlapping event"`
+- `429` — rate limit exceeded
 
 ---
 
@@ -343,6 +361,17 @@ Lists `CONFIRMED` participants. **Event owner only.**
 **Common errors:**
 
 - `403` — `"Only the event owner can view participants"`
+
+---
+
+## Observability
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /actuator/health` | Liveness/readiness (public) |
+| `GET /actuator/prometheus` | Prometheus scrape endpoint (public) |
+
+Custom metric: `eventhub_registrations_confirmed_total` — incremented on each confirmed registration.
 
 ---
 
