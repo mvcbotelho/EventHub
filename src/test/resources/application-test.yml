@@ -11,3 +11,8 @@ spring:
 
   flyway:
     enabled: false
+
+eventhub:
+  jwt:
+    secret: test-secret-key-for-unit-tests-must-be-at-least-256-bits-long
+    expiration-ms: 3600000

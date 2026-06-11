@@ -12,6 +12,8 @@ public record EventResponse(
         Instant startDateTime,
         Instant endDateTime,
         Integer maxParticipants,
+        UUID ownerId,
+        String ownerName,
         Instant createdAt,
         Instant updatedAt
 ) {
@@ -25,6 +27,8 @@ public record EventResponse(
                 event.getStartDateTime(),
                 event.getEndDateTime(),
                 event.getMaxParticipants(),
+                event.getOwner().getId(),
+                event.getOwner().getName(),
                 event.getCreatedAt(),
                 event.getUpdatedAt()
         );

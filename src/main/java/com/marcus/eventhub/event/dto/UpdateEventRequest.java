@@ -7,23 +7,23 @@ import jakarta.validation.constraints.Positive;
 import java.time.Instant;
 
 public record UpdateEventRequest(
-        @NotBlank(message = "O título é obrigatório")
+        @NotBlank(message = "Title is required")
         String title,
 
         String description,
 
-        @NotBlank(message = "O local é obrigatório")
+        @NotBlank(message = "Location is required")
         String location,
 
-        @NotNull(message = "A data de início é obrigatória")
-        @FutureOrPresent(message = "A data de início não pode estar no passado")
+        @NotNull(message = "Start date and time are required")
+        @FutureOrPresent(message = "Start date and time cannot be in the past")
         Instant startDateTime,
 
-        @NotNull(message = "A data de fim é obrigatória")
+        @NotNull(message = "End date and time are required")
         Instant endDateTime,
 
-        @NotNull(message = "O número máximo de participantes é obrigatório")
-        @Positive(message = "O número máximo de participantes deve ser positivo")
+        @NotNull(message = "Maximum number of participants is required")
+        @Positive(message = "Maximum number of participants must be positive")
         Integer maxParticipants
 ) {
 }

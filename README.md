@@ -1,111 +1,130 @@
 # EventHub API
 
-API REST para criação, divulgação e participação em eventos, construída com **Java 21**, **Spring Boot 3** e **PostgreSQL**, com abordagem **Docker-first**.
+REST API for creating, publishing, and joining events, built with **Java 21**, **Spring Boot 3**, and **PostgreSQL**, using a **Docker-first** approach.
 
 ## Stack
 
 - Java 21
 - Spring Boot 3
-- Spring Web, Data JPA, Validation
+- Spring Web, Data JPA, Validation, Security
+- JWT (jjwt)
 - PostgreSQL
 - Flyway
 - Swagger/OpenAPI
 - Docker & Docker Compose
 
-## Estrutura do projeto
+## Project structure
 
 ```text
 eventhub-api/
 ├── src/main/java/com/marcus/eventhub/
-│   ├── common/          # Configurações e tratamento global de erros
-│   ├── event/           # Domínio de eventos (MVP - Etapa 1)
+│   ├── auth/            # JWT, login, registration
+│   ├── user/            # User entity
+│   ├── event/           # Events
+│   ├── registration/    # Registrations and participants
+│   ├── common/          # Shared config and global errors
 │   └── EventHubApplication.java
 ├── src/main/resources/
 │   ├── application.yml
-│   └── db/migration/    # Migrations Flyway
+│   └── db/migration/
 ├── Dockerfile
 ├── docker-compose.yml
 └── pom.xml
 ```
 
-## Pré-requisitos
-
-- [Docker](https://docs.docker.com/get-docker/)
-- [Docker Compose](https://docs.docker.com/compose/)
-
-## Como executar
-
-1. Copie as variáveis de ambiente de exemplo:
+## Getting started
 
 ```bash
 cp .env.example .env
-```
-
-2. Suba a aplicação e o banco:
-
-```bash
 docker compose up --build
 ```
 
-3. Acesse a documentação interativa:
-
 - Swagger UI: http://localhost:8080/swagger-ui.html
-- OpenAPI JSON: http://localhost:8080/api-docs
+- Stop: `docker compose down`
 
-4. Para parar os containers:
+## API client (Bruno)
 
-```bash
-docker compose down
+A ready-to-use Bruno collection lives in [`api-client/eventhub`](api-client/eventhub). See [`api-client/README.md`](api-client/README.md) for setup and usage.
+
+## Authentication
+
+Public routes: `POST /auth/register`, `POST /auth/login`.
+
+All other routes require:
+
+```http
+Authorization: Bearer <token>
 ```
 
-## Endpoints disponíveis (Etapa 1)
+In Swagger, click **Authorize** and paste **only the token** (without the `Bearer` prefix).
 
-| Método | Endpoint | Descrição |
-|--------|----------|-----------|
-| POST | `/events` | Criar evento |
-| GET | `/events` | Listar todos os eventos |
-| GET | `/events/this-week` | Listar eventos da semana |
-| GET | `/events/{id}` | Detalhes de um evento |
-| PUT | `/events/{id}` | Atualizar evento |
-| DELETE | `/events/{id}` | Excluir evento |
+## Endpoints
 
-> **Nota:** Nesta etapa inicial, os endpoints estão **sem autenticação**. Autenticação JWT, usuários e inscrições serão adicionados nas próximas etapas.
+### Auth
 
-## Exemplo com cURL
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | `/auth/register` | No | Register a user |
+| POST | `/auth/login` | No | Login (returns JWT) |
+| GET | `/auth/me` | Yes | Authenticated user profile |
 
-Criar um evento:
+### Events
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/events` | Create an event |
+| GET | `/events` | List all events |
+| GET | `/events/mine` | List events created by the authenticated user |
+| GET | `/events/this-week` | List events this week |
+| GET | `/events/registered` | List events the user is registered for |
+| GET | `/events/{id}` | Get event details |
+| PUT | `/events/{id}` | Update event (owner only) |
+| DELETE | `/events/{id}` | Delete event (owner only) |
+
+### Registrations
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/events/{eventId}/registrations` | Register for an event |
+| DELETE | `/events/{eventId}/registrations/me` | Cancel own registration |
+| GET | `/events/{eventId}/participants` | List participants (owner only) |
+
+## Example flow
 
 ```bash
+# 1. Register
+curl -X POST http://localhost:8080/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Marcus","email":"marcus@email.com","password":"123456"}'
+
+# 2. Login
+TOKEN=$(curl -s -X POST http://localhost:8080/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"marcus@email.com","password":"123456"}' | jq -r .token)
+
+# 3. Create an event
 curl -X POST http://localhost:8080/events \
+  -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "title": "Meetup Java",
-    "description": "Encontro sobre Spring Boot 3",
-    "location": "São Paulo - SP",
+    "title": "Java Meetup",
+    "description": "Spring Boot 3",
+    "location": "São Paulo",
     "startDateTime": "2026-06-15T19:00:00Z",
     "endDateTime": "2026-06-15T21:00:00Z",
     "maxParticipants": 50
   }'
 ```
 
-Listar eventos:
+## Next steps
 
-```bash
-curl http://localhost:8080/events
-```
+1. Unit and integration tests (JUnit + Testcontainers)
+2. Observability and CI/CD improvements
 
-## Próximas etapas
+## Technical decisions
 
-1. Cadastro e login de usuários com JWT
-2. Associação de eventos ao dono (owner)
-3. Regras de autorização (editar/excluir apenas o dono)
-4. Inscrições em eventos
-5. Testes com JUnit e Testcontainers
-
-## Decisões técnicas (Etapa 1)
-
-- **Organização por domínio:** cada feature (`event`, futuramente `auth`, `user`, `registration`) fica em seu próprio pacote.
-- **DTOs separados:** entrada (`CreateEventRequest`, `UpdateEventRequest`) e saída (`EventResponse`) desacoplam a API da entidade JPA.
-- **Flyway + `ddl-auto: validate`:** o schema é versionado via migrations; o Hibernate apenas valida, sem alterar o banco automaticamente.
-- **Docker-first:** a aplicação se conecta ao PostgreSQL pelo nome do serviço `postgres` na rede Docker.
-- **Validação em camadas:** Bean Validation nos DTOs + regras de negócio no `EventService` (ex.: data fim >= data início).
+- **Stateless JWT:** no server-side sessions; a filter validates the token on each request.
+- **BCrypt:** passwords are never stored in plain text.
+- **Owner FK:** migration V3 links events to the creating user; stage 1 test data is removed before the schema change.
+- **Single registration per user/event:** unique constraint on `(event_id, user_id)` with `CONFIRMED` or `CANCELED` status.
+- **Authorization in services:** owner and participant rules live in the business layer, not only in Spring Security.

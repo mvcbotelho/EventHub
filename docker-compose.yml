@@ -27,6 +27,8 @@ services:
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-eventhub}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-eventhub}
       SERVER_PORT: 8080
+      JWT_SECRET: ${JWT_SECRET:-change-me-use-a-long-secret-key-for-development-only-256bits}
+      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-86400000}
     ports:
       - "${APP_PORT:-8080}:8080"
 

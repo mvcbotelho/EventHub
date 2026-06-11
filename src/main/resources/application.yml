@@ -28,8 +28,15 @@ springdoc:
     path: /api-docs
   swagger-ui:
     path: /swagger-ui.html
+    persist-authorization: true
 
 logging:
   level:
     org.springframework.web: INFO
     com.marcus.eventhub: DEBUG
+
+eventhub:
+  jwt:
+    secret: ${JWT_SECRET:change-me-use-a-long-secret-key-for-development-only-256bits}
+    expiration-ms: ${JWT_EXPIRATION_MS:86400000}
+
