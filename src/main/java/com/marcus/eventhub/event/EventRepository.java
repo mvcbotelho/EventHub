@@ -13,10 +13,10 @@ import org.springframework.data.repository.query.Param;
 
 public interface EventRepository extends JpaRepository<Event, UUID>, JpaSpecificationExecutor<Event> {
 
-    @EntityGraph(attributePaths = "owner")
+    @EntityGraph(attributePaths = {"owner", "category"})
     @Query("SELECT e FROM Event e WHERE e.id = :id")
     Optional<Event> findByIdWithOwner(@Param("id") UUID id);
 
-    @EntityGraph(attributePaths = "owner")
+    @EntityGraph(attributePaths = {"owner", "category"})
     Page<Event> findAll(Specification<Event> spec, Pageable pageable);
 }

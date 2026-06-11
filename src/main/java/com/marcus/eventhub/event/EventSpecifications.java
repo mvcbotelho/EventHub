@@ -38,6 +38,11 @@ public final class EventSpecifications {
                     cb.lessThanOrEqualTo(root.get("startDateTime"), filter.startTo()));
         }
 
+        if (filter.categorySlug() != null && !filter.categorySlug().isBlank()) {
+            spec = spec.and((root, query, cb) ->
+                    cb.equal(cb.lower(root.join("category").get("slug")), filter.categorySlug().toLowerCase()));
+        }
+
         return spec;
     }
 

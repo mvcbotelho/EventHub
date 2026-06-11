@@ -29,8 +29,10 @@ The focus is hands-on backend learning, solid architecture practices, and evolva
 | Flyway | Schema versioning |
 | SpringDoc OpenAPI | Interactive docs (Swagger) |
 | Spring Boot Actuator | Health checks and Prometheus metrics |
-| Bucket4j | Rate limiting |
+| Bucket4j + Redis | Rate limiting (in-memory locally, Redis in Docker) |
 | Spring Mail + MailHog | Registration email notifications (dev) |
+| OpenTelemetry + Jaeger | Distributed tracing (Docker profile) |
+| Grafana + Prometheus | Dashboards and metrics scraping |
 | Logstash Logback Encoder | Structured JSON logging |
 | Docker + Docker Compose | Runtime environment |
 | JUnit + Testcontainers | Automated tests |
@@ -56,18 +58,27 @@ The focus is hands-on backend learning, solid architecture practices, and evolva
 ### Registrations
 - Event registration with email confirmation (when mail enabled)
 - Schedule conflict validation (no overlapping confirmed events)
-- Cancel own registration
+- Cancel own registration (promotes next waitlist entry when applicable)
+- Waitlist when event is full (`POST /events/{id}/waitlist`)
 - List participants (event owner only)
 
+### Categories and admin
+- List event categories (`GET /categories`, public)
+- Create categories (`POST /categories`, admin only)
+- Optional `categoryId` on event create/update
+- Filter events by `categorySlug`
+- Admin endpoints: list users, update roles, platform stats, delete any event
+- Bootstrap admin user via env vars in Docker
+
 ### Scale and reliability
-- Rate limiting on auth and registration endpoints (Bucket4j, per IP)
+- Rate limiting on auth and registration endpoints (Bucket4j; Redis in Docker)
 - Prometheus metrics (`GET /actuator/prometheus`)
-- Email notifications via SMTP (MailHog in Docker Compose)
-- Block event updates when confirmed registrants exist
+- OpenTelemetry tracing to Jaeger (Docker profile)
+- Grafana dashboard for HTTP rate, registrations, JVM memory
 
 ### Infrastructure and quality
 - Docker-first (`Dockerfile` + `docker-compose.yml`) with healthchecks on `postgres` and `app`
-- Flyway migrations (V1–V6)
+- Flyway migrations (V1–V9)
 - Global error handling (`@RestControllerAdvice`)
 - JSON error responses for 401/403 (`SecurityProblemHandler`)
 - DTOs, services, and repositories by domain
@@ -82,10 +93,10 @@ The focus is hands-on backend learning, solid architecture practices, and evolva
 
 See the detailed roadmap in [`docs/NEXT_STEPS.md`](docs/NEXT_STEPS.md). Summary:
 
-- Distributed rate limiting (Redis)
-- OpenTelemetry tracing and dashboards
-- Role-based access and event categories
-- Waitlist for full events
+- Real-time updates (WebSocket/SSE)
+- Full-text search and event images
+- OAuth2 social login
+- Kubernetes deployment
 
 ## Project structure
 
@@ -103,13 +114,17 @@ EventHub/
 │   │   ├── user/
 │   │   ├── event/
 │   │   ├── registration/
+│   │   ├── category/
+│   │   ├── admin/
 │   │   ├── common/
 │   │   └── EventHubApplication.java
 │   ├── main/resources/
 │   │   ├── application.yml
+│   │   ├── application-docker.yml
 │   │   ├── logback-spring.xml
 │   │   └── db/migration/
 │   └── test/
+├── observability/              # Prometheus + Grafana provisioning
 ├── Dockerfile
 ├── docker-compose.yml
 ├── .env.example
@@ -162,6 +177,9 @@ docker compose down -v
 | Health check | http://localhost:8080/actuator/health |
 | Prometheus | http://localhost:8080/actuator/prometheus |
 | MailHog UI (Docker) | http://localhost:8025 |
+| Grafana (Docker) | http://localhost:3000 |
+| Jaeger (Docker) | http://localhost:16686 |
+| Prometheus (Docker) | http://localhost:9090 |
 | Swagger UI | http://localhost:8080/swagger-ui.html |
 | OpenAPI JSON | http://localhost:8080/api-docs |
 
@@ -173,6 +191,7 @@ Public routes:
 - `POST /auth/login`
 - `POST /auth/refresh`
 - `POST /auth/logout`
+- `GET /categories`
 - `GET /actuator/health`
 
 All other routes require:
@@ -210,6 +229,14 @@ Defined in `.env.example` and used by `docker-compose.yml`:
 | `JWT_EXPIRATION_MS` | `86400000` | Access token expiration (24h) |
 | `JWT_REFRESH_EXPIRATION_MS` | `604800000` | Refresh token expiration (7d) |
 | `RATE_LIMIT_ENABLED` | `true` | Enable/disable rate limiting |
+| `RATE_LIMIT_REGISTRATION_REFILL_MINUTES` | `1` | Registration bucket refill interval |
+| `RATE_LIMIT_REDIS_ENABLED` | `false` | Use Redis backend (auto `true` in Docker) |
+| `REDIS_HOST` / `REDIS_PORT` | `redis` / `6379` | Redis connection (Docker) |
+| `ADMIN_BOOTSTRAP_EMAIL` | *(empty)* | Create/promote bootstrap admin |
+| `ADMIN_BOOTSTRAP_PASSWORD` | *(empty)* | Bootstrap admin password |
+| `GRAFANA_PORT` | `3000` | Grafana UI port |
+| `JAEGER_UI_PORT` | `16686` | Jaeger UI port |
+| `PROMETHEUS_PORT` | `9090` | Prometheus UI port |
 | `MAIL_ENABLED` | `true` in Docker | Send registration emails via SMTP |
 | `MAIL_FROM` | `noreply@eventhub.local` | Sender address |
 | `MAILHOG_UI_PORT` | `8025` | MailHog web UI port |
@@ -288,6 +315,10 @@ Event listings return a `PageResponse` object (`content`, `page`, `size`, `total
 | Registration emails | Done (MailHog in Docker) |
 | Schedule conflict validation | Done |
 | Block edit with registrants | Done |
+| Categories and RBAC | Done |
+| Waitlist + auto-promotion | Done |
+| Redis rate limit (Docker) | Done |
+| OpenTelemetry + Grafana | Done |
 | Swagger/OpenAPI | Done |
 | Bruno collection | Done |
 | Automated tests | Unit + integration (Testcontainers) |
@@ -295,7 +326,7 @@ Event listings return a `PageResponse` object (`content`, `page`, `size`, `total
 | Actuator + app healthcheck | Done |
 | Structured JSON logging | Done |
 
-**Version:** `0.0.1-SNAPSHOT` — functional MVP with product evolution features (Phase 7).
+**Version:** `0.0.1-SNAPSHOT` — production hardening complete (Phase 9).
 
 ## Roadmap summary
 
@@ -309,7 +340,8 @@ Event listings return a `PageResponse` object (`content`, `page`, `size`, `total
 | 6 | Tests, CI/CD, observability | Done |
 | 7 | Pagination, filters, refresh token, soft delete | Done |
 | 8 | Rate limiting, metrics, email, business rules | Done |
-| 9 | Production hardening (Redis, tracing, RBAC) | **Next** |
+| 9 | Production hardening (Redis, tracing, RBAC) | Done |
+| 10 | Platform expansion | **Next** |
 
 Details in [`docs/NEXT_STEPS.md`](docs/NEXT_STEPS.md).
 

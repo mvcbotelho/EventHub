@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import java.time.Instant;
+import java.util.UUID;
 
 public record CreateEventRequest(
         @NotBlank(message = "Title is required")
@@ -24,6 +25,8 @@ public record CreateEventRequest(
 
         @NotNull(message = "Maximum number of participants is required")
         @Positive(message = "Maximum number of participants must be positive")
-        Integer maxParticipants
+        Integer maxParticipants,
+
+        UUID categoryId
 ) {
 }

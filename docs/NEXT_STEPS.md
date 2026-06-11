@@ -6,22 +6,26 @@ Planning document for evolving the project after the functional MVP.
 
 ## Current state
 
-**EventHub API** is at `0.0.1-SNAPSHOT` with the main flow and scale features implemented:
+**EventHub API** is at `0.0.1-SNAPSHOT` with production-hardening features implemented:
 
 - JWT authentication with refresh tokens;
 - paginated and filterable event listings with soft delete;
 - event registrations with schedule conflict validation;
 - owner-only updates blocked when registrants exist;
-- rate limiting on auth and registration endpoints;
-- Prometheus metrics via Actuator;
+- distributed rate limiting (Redis in Docker, in-memory locally);
+- OpenTelemetry tracing to Jaeger (Docker profile);
+- Prometheus metrics + Grafana dashboards;
+- role-based access (USER / ADMIN);
+- event categories with slug filter;
+- waitlist with automatic promotion on cancellation;
 - email notifications on registration (MailHog in Docker Compose);
 - structured JSON logging, CI, and Testcontainers integration tests.
 
 **Not yet implemented:**
 
-- distributed rate limiting (Redis);
-- full observability stack (tracing, dashboards);
-- advanced notification channels (SMS, push).
+- advanced notification channels (SMS, push);
+- multi-region deployment;
+- API versioning.
 
 ---
 
@@ -64,17 +68,25 @@ Planning document for evolving the project after the functional MVP.
 - [x] User schedule conflict validation
 - [x] Block event edit when confirmed registrants exist
 
+### Phase 9 — Production hardening
+
+- [x] Distributed rate limiting with Redis (Docker profile)
+- [x] OpenTelemetry tracing + Grafana dashboards (Jaeger + Prometheus)
+- [x] Role-based access (admin vs user)
+- [x] Event categories/tags
+- [x] Waitlist when events are full
+
 ---
 
 ## Recommended next phase
 
-### Phase 9 — Production hardening
+### Phase 10 — Platform expansion
 
-1. **Distributed rate limiting** with Redis
-2. **OpenTelemetry tracing** and Grafana dashboards
-3. **Role-based access** (admin vs user)
-4. **Event categories/tags**
-5. **Waitlist** when events are full
+1. **WebSocket or SSE** for real-time waitlist and registration updates
+2. **Full-text search** (PostgreSQL `tsvector` or Elasticsearch)
+3. **Event images** (S3-compatible object storage)
+4. **OAuth2 social login** (Google, GitHub)
+5. **Kubernetes manifests** and Helm chart
 
 ---
 
@@ -97,6 +109,9 @@ Planning document for evolving the project after the functional MVP.
 | Block edit with confirmed registrants | Implemented |
 | Rate limiting on sensitive endpoints | Implemented |
 | Registration email notification | Implemented (when mail enabled) |
+| Waitlist when full + auto-promotion | Implemented |
+| Admin role for platform management | Implemented |
+| Event categories | Implemented |
 
 ---
 
@@ -104,8 +119,10 @@ Planning document for evolving the project after the functional MVP.
 
 - [ ] Read [`ARCHITECTURE.md`](ARCHITECTURE.md) and [`API.md`](API.md)
 - [ ] Start environment: `docker compose up --build`
-- [ ] Open MailHog UI at http://localhost:8025 after registering for an event
-- [ ] Pick first Phase 9 task
+- [ ] Open Grafana at http://localhost:3000 (admin/admin)
+- [ ] Open Jaeger at http://localhost:16686
+- [ ] Login as bootstrap admin: `admin@eventhub.local` / `admin123456`
+- [ ] Pick first Phase 10 task
 - [ ] Update this document when items are done
 
 ---

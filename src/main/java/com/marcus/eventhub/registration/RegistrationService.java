@@ -9,8 +9,6 @@ import com.marcus.eventhub.notification.RegistrationNotificationService;
 import com.marcus.eventhub.registration.dto.ParticipantResponse;
 import com.marcus.eventhub.registration.dto.RegistrationResponse;
 import com.marcus.eventhub.user.User;
-import io.micrometer.core.instrument.Counter;
-import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -25,22 +23,23 @@ public class RegistrationService {
     private final EventService eventService;
     private final CurrentUserService currentUserService;
     private final RegistrationNotificationService notificationService;
-    private final Counter confirmedRegistrationsCounter;
+    private final WaitlistService waitlistService;
+    private final RegistrationMetrics registrationMetrics;
 
     public RegistrationService(
             EventRegistrationRepository registrationRepository,
             EventService eventService,
             CurrentUserService currentUserService,
             RegistrationNotificationService notificationService,
-            MeterRegistry meterRegistry
+            WaitlistService waitlistService,
+            RegistrationMetrics registrationMetrics
     ) {
         this.registrationRepository = registrationRepository;
         this.eventService = eventService;
         this.currentUserService = currentUserService;
         this.notificationService = notificationService;
-        this.confirmedRegistrationsCounter = Counter.builder("eventhub.registrations.confirmed")
-                .description("Confirmed event registrations")
-                .register(meterRegistry);
+        this.waitlistService = waitlistService;
+        this.registrationMetrics = registrationMetrics;
     }
 
     @Transactional
@@ -89,6 +88,7 @@ public class RegistrationService {
         }
 
         registration.setStatus(RegistrationStatus.CANCELED);
+        waitlistService.promoteNext(eventId);
     }
 
     public List<ParticipantResponse> listParticipants(UUID eventId) {
@@ -129,7 +129,7 @@ public class RegistrationService {
     }
 
     private void notifyAndTrack(Event event, User user) {
-        confirmedRegistrationsCounter.increment();
+        registrationMetrics.trackConfirmed();
         notificationService.notifyRegistrationConfirmed(event, user);
     }
 }

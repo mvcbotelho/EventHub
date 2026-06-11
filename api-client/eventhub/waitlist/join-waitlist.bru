@@ -1,0 +1,20 @@
+meta {
+  name: Join Waitlist
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/events/{{eventId}}/waitlist
+  body: none
+  auth: inherit
+}
+
+headers {
+  accept: application/json
+}
+
+docs {
+  Join the waitlist when the event is full.
+  Requires a valid eventId and authenticated user.
+}

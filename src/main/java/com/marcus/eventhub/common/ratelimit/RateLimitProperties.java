@@ -10,6 +10,7 @@ public class RateLimitProperties {
     private int authRefillPerMinutes = 1;
     private int registrationCapacity = 30;
     private int registrationRefillPerMinutes = 1;
+    private boolean redisEnabled = false;
 
     public boolean isEnabled() {
         return enabled;
@@ -49,5 +50,13 @@ public class RateLimitProperties {
 
     public void setRegistrationRefillPerMinutes(int registrationRefillPerMinutes) {
         this.registrationRefillPerMinutes = registrationRefillPerMinutes;
+    }
+
+    public boolean isRedisEnabled() {
+        return redisEnabled;
+    }
+
+    public void setRedisEnabled(boolean redisEnabled) {
+        this.redisEnabled = redisEnabled;
     }
 }

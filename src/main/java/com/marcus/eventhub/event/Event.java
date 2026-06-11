@@ -1,5 +1,6 @@
 package com.marcus.eventhub.event;
 
+import com.marcus.eventhub.category.Category;
 import com.marcus.eventhub.user.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -43,6 +44,10 @@ public class Event {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "owner_id", nullable = false)
     private User owner;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id")
+    private Category category;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -141,6 +146,14 @@ public class Event {
 
     public User getOwner() {
         return owner;
+    }
+
+    public Category getCategory() {
+        return category;
+    }
+
+    public void setCategory(Category category) {
+        this.category = category;
     }
 
     public Instant getCreatedAt() {

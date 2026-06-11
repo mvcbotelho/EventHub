@@ -12,6 +12,8 @@ public record EventFilterParams(
         @Schema(description = "Minimum start date/time (inclusive, UTC)", example = "2026-12-01T00:00:00Z")
         Instant startFrom,
         @Schema(description = "Maximum start date/time (inclusive, UTC)", example = "2026-12-31T23:59:59Z")
-        Instant startTo
+        Instant startTo,
+        @Schema(description = "Filter by category slug", example = "meetup")
+        String categorySlug
 ) {
 }

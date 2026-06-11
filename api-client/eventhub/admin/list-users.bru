@@ -1,0 +1,20 @@
+meta {
+  name: List Users
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/admin/users
+  body: none
+  auth: inherit
+}
+
+headers {
+  accept: application/json
+}
+
+docs {
+  Admin only. Login as bootstrap admin in Docker:
+  admin@eventhub.local / admin123456
+}

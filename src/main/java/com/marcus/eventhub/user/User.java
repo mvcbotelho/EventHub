@@ -2,6 +2,8 @@ package com.marcus.eventhub.user;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
@@ -25,6 +27,10 @@ public class User {
     @Column(nullable = false)
     private String password;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private UserRole role;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -35,10 +41,15 @@ public class User {
     }
 
     public User(String name, String email, String password) {
+        this(name, email, password, UserRole.USER);
+    }
+
+    public User(String name, String email, String password, UserRole role) {
         this.id = UUID.randomUUID();
         this.name = name;
         this.email = email;
         this.password = password;
+        this.role = role;
     }
 
     @PrePersist
@@ -67,6 +78,14 @@ public class User {
 
     public String getPassword() {
         return password;
+    }
+
+    public UserRole getRole() {
+        return role;
+    }
+
+    public void setRole(UserRole role) {
+        this.role = role;
     }
 
     public Instant getCreatedAt() {

@@ -26,7 +26,11 @@ public abstract class AbstractPostgresIntegrationTest {
         registry.add("eventhub.jwt.expiration-ms", () -> "3600000");
         registry.add("eventhub.jwt.refresh-expiration-ms", () -> "604800000");
         registry.add("eventhub.rate-limit.enabled", () -> "false");
+        registry.add("eventhub.rate-limit.redis-enabled", () -> "false");
         registry.add("eventhub.mail.enabled", () -> "false");
+        registry.add("eventhub.admin.bootstrap-email", () -> "admin@integration.test");
+        registry.add("eventhub.admin.bootstrap-password", () -> "admin123456");
+        registry.add("management.tracing.sampling.probability", () -> "0.0");
         registry.add("management.health.mail.enabled", () -> "false");
         registry.add("management.endpoints.web.exposure.include", () -> "health,prometheus");
         registry.add("management.endpoint.prometheus.access", () -> "unrestricted");

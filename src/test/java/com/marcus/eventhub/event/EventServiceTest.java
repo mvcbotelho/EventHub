@@ -7,6 +7,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.marcus.eventhub.auth.CurrentUserService;
+import com.marcus.eventhub.category.CategoryService;
 import com.marcus.eventhub.common.exception.BusinessException;
 import com.marcus.eventhub.common.exception.ForbiddenException;
 import com.marcus.eventhub.event.dto.CreateEventRequest;
@@ -35,6 +36,9 @@ class EventServiceTest {
 
     @Mock
     private CurrentUserService currentUserService;
+
+    @Mock
+    private CategoryService categoryService;
 
     @InjectMocks
     private EventService eventService;
@@ -69,7 +73,8 @@ class EventServiceTest {
                 "SP",
                 Instant.parse("2026-12-20T19:00:00Z"),
                 Instant.parse("2026-12-20T21:00:00Z"),
-                10
+                10,
+                null
         );
 
         var response = eventService.create(request);
@@ -87,7 +92,8 @@ class EventServiceTest {
                 "SP",
                 Instant.parse("2026-12-20T21:00:00Z"),
                 Instant.parse("2026-12-20T19:00:00Z"),
-                10
+                10,
+                null
         );
 
         assertThatThrownBy(() -> eventService.create(request))
@@ -108,7 +114,8 @@ class EventServiceTest {
                 "RJ",
                 Instant.parse("2026-12-15T19:00:00Z"),
                 Instant.parse("2026-12-15T21:00:00Z"),
-                10
+                10,
+                null
         );
 
         var response = eventService.update(event.getId(), request);
@@ -130,7 +137,8 @@ class EventServiceTest {
                 "RJ",
                 Instant.parse("2026-12-15T19:00:00Z"),
                 Instant.parse("2026-12-15T21:00:00Z"),
-                10
+                10,
+                null
         );
 
         assertThatThrownBy(() -> eventService.update(event.getId(), request))
@@ -161,7 +169,8 @@ class EventServiceTest {
                 "RJ",
                 Instant.parse("2026-12-15T19:00:00Z"),
                 Instant.parse("2026-12-15T21:00:00Z"),
-                10
+                10,
+                null
         );
 
         assertThatThrownBy(() -> eventService.update(event.getId(), request))

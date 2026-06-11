@@ -227,6 +227,64 @@ class EventHubFlowIT extends AbstractPostgresIntegrationTest {
                         .value("Cannot update an event that has confirmed registrations"));
     }
 
+    @Test
+    void categoriesShouldBePublicAndSeeded() throws Exception {
+        mockMvc.perform(get("/categories"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.slug == 'meetup')]").exists())
+                .andExpect(jsonPath("$[?(@.slug == 'workshop')]").exists());
+    }
+
+    @Test
+    void adminEndpointsShouldRequireAdminRole() throws Exception {
+        String userToken = registerAndLogin("regular-user@test.com", "Regular User");
+
+        mockMvc.perform(get("/admin/users")
+                        .header("Authorization", "Bearer " + userToken))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void adminShouldListUsers() throws Exception {
+        String adminToken = login("admin@integration.test", "admin123456");
+
+        mockMvc.perform(get("/admin/users")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.email == 'admin@integration.test')].role").value("ADMIN"));
+    }
+
+    @Test
+    void waitlistShouldPromoteOnCancellation() throws Exception {
+        String ownerToken = registerAndLogin("waitlist-owner@test.com", "Waitlist Owner");
+        String guest1Token = registerAndLogin("waitlist-guest1@test.com", "Guest One");
+        String guest2Token = registerAndLogin("waitlist-guest2@test.com", "Guest Two");
+
+        String eventId = createEvent(ownerToken, "Tiny Meetup", "SP", 1);
+
+        mockMvc.perform(post("/events/{eventId}/registrations", eventId)
+                        .header("Authorization", "Bearer " + guest1Token))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(post("/events/{eventId}/registrations", eventId)
+                        .header("Authorization", "Bearer " + guest2Token))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Event is full"));
+
+        mockMvc.perform(post("/events/{eventId}/waitlist", eventId)
+                        .header("Authorization", "Bearer " + guest2Token))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(delete("/events/{eventId}/registrations/me", eventId)
+                        .header("Authorization", "Bearer " + guest1Token))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/events/{eventId}/participants", eventId)
+                        .header("Authorization", "Bearer " + ownerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].userEmail").value("waitlist-guest2@test.com"));
+    }
+
     private void register(String email, String name) throws Exception {
         mockMvc.perform(post("/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -252,6 +310,19 @@ class EventHubFlowIT extends AbstractPostgresIntegrationTest {
         return json.get("token").asText();
     }
 
+    private String login(String email, String password) throws Exception {
+        MvcResult loginResult = mockMvc.perform(post("/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email":"%s","password":"%s"}
+                                """.formatted(email, password)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        JsonNode json = objectMapper.readTree(loginResult.getResponse().getContentAsString());
+        return json.get("token").asText();
+    }
+
     private String createEvent(String token) throws Exception {
         return createEvent(token, "Integration Meetup", "SP");
     }
@@ -263,6 +334,23 @@ class EventHubFlowIT extends AbstractPostgresIntegrationTest {
     }
 
     private String createEvent(String token, String title, String location, Instant start, Instant end) throws Exception {
+        return createEvent(token, title, location, start, end, 10);
+    }
+
+    private String createEvent(String token, String title, String location, int maxParticipants) throws Exception {
+        Instant start = Instant.now().plusSeconds(86_400);
+        Instant end = start.plusSeconds(7_200);
+        return createEvent(token, title, location, start, end, maxParticipants);
+    }
+
+    private String createEvent(
+            String token,
+            String title,
+            String location,
+            Instant start,
+            Instant end,
+            int maxParticipants
+    ) throws Exception {
         String body = """
                 {
                   "title": "%s",
@@ -270,9 +358,9 @@ class EventHubFlowIT extends AbstractPostgresIntegrationTest {
                   "location": "%s",
                   "startDateTime": "%s",
                   "endDateTime": "%s",
-                  "maxParticipants": 10
+                  "maxParticipants": %d
                 }
-                """.formatted(title, location, start, end);
+                """.formatted(title, location, start, end, maxParticipants);
 
         MvcResult result = mockMvc.perform(post("/events")
                         .header("Authorization", "Bearer " + token)

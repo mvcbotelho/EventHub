@@ -35,7 +35,11 @@ class RegistrationServiceTest {
     @Mock
     private RegistrationNotificationService notificationService;
 
+    @Mock
+    private WaitlistService waitlistService;
+
     private RegistrationService registrationService;
+    private RegistrationMetrics registrationMetrics;
 
     private User owner;
     private User participant;
@@ -44,12 +48,14 @@ class RegistrationServiceTest {
 
     @BeforeEach
     void setUp() {
+        registrationMetrics = new RegistrationMetrics(new SimpleMeterRegistry());
         registrationService = new RegistrationService(
                 registrationRepository,
                 eventService,
                 currentUserService,
                 notificationService,
-                new SimpleMeterRegistry()
+                waitlistService,
+                registrationMetrics
         );
 
         owner = new User("Owner", "owner@test.com", "hash");

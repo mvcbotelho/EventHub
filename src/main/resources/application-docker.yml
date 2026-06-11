@@ -1,0 +1,20 @@
+spring:
+  data:
+    redis:
+      host: ${REDIS_HOST:redis}
+      port: ${REDIS_PORT:6379}
+
+eventhub:
+  rate-limit:
+    redis-enabled: true
+  admin:
+    bootstrap-email: ${ADMIN_BOOTSTRAP_EMAIL:admin@eventhub.local}
+    bootstrap-password: ${ADMIN_BOOTSTRAP_PASSWORD:admin123456}
+
+management:
+  tracing:
+    sampling:
+      probability: ${TRACING_SAMPLING_PROBABILITY:1.0}
+  otlp:
+    tracing:
+      endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT:http://jaeger:4318/v1/traces}

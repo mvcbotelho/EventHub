@@ -1,6 +1,8 @@
 package com.marcus.eventhub.event;
 
 import com.marcus.eventhub.auth.CurrentUserService;
+import com.marcus.eventhub.category.Category;
+import com.marcus.eventhub.category.CategoryService;
 import com.marcus.eventhub.common.dto.PageResponse;
 import com.marcus.eventhub.common.exception.BusinessException;
 import com.marcus.eventhub.common.exception.ForbiddenException;
@@ -29,15 +31,18 @@ public class EventService {
     private final EventRepository eventRepository;
     private final EventRegistrationRepository registrationRepository;
     private final CurrentUserService currentUserService;
+    private final CategoryService categoryService;
 
     public EventService(
             EventRepository eventRepository,
             EventRegistrationRepository registrationRepository,
-            CurrentUserService currentUserService
+            CurrentUserService currentUserService,
+            CategoryService categoryService
     ) {
         this.eventRepository = eventRepository;
         this.registrationRepository = registrationRepository;
         this.currentUserService = currentUserService;
+        this.categoryService = categoryService;
     }
 
     @Transactional
@@ -54,6 +59,7 @@ public class EventService {
                 request.maxParticipants(),
                 owner
         );
+        applyCategory(event, request.categoryId());
 
         return EventResponse.from(eventRepository.save(event));
     }
@@ -112,6 +118,7 @@ public class EventService {
         event.setStartDateTime(request.startDateTime());
         event.setEndDateTime(request.endDateTime());
         event.setMaxParticipants(request.maxParticipants());
+        applyCategory(event, request.categoryId());
 
         return EventResponse.from(event);
     }
@@ -151,5 +158,14 @@ public class EventService {
         if (endDateTime.isBefore(startDateTime)) {
             throw new BusinessException("End date and time cannot be before start date and time");
         }
+    }
+
+    private void applyCategory(Event event, UUID categoryId) {
+        if (categoryId == null) {
+            event.setCategory(null);
+            return;
+        }
+        Category category = categoryService.getByIdOrThrow(categoryId);
+        event.setCategory(category);
     }
 }

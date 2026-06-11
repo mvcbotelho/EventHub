@@ -239,6 +239,7 @@ Lists all events (paginated, with optional filters).
 | `location` | string | — | Case-insensitive partial match |
 | `startFrom` | ISO-8601 | — | Minimum `startDateTime` (inclusive) |
 | `startTo` | ISO-8601 | — | Maximum `startDateTime` (inclusive) |
+| `categorySlug` | string | — | Exact match on category slug (e.g. `meetup`) |
 
 **Response `200 OK`:** `PageResponse<EventResponse>`
 
@@ -364,6 +365,85 @@ Lists `CONFIRMED` participants. **Event owner only.**
 
 ---
 
+## Categories
+
+### GET /categories
+
+Lists all event categories. **Public** (no authentication required).
+
+**Response `200 OK`:** array of `CategoryResponse`
+
+Seeded categories: `meetup`, `workshop`, `conference`.
+
+---
+
+### POST /categories
+
+Creates a new category. **Admin only.**
+
+**Body:** `CreateCategoryRequest`
+
+```json
+{
+  "name": "Hackathon",
+  "slug": "hackathon"
+}
+```
+
+**Response `201 Created`:** `CategoryResponse`
+
+---
+
+## Waitlist
+
+Base path: `/events/{eventId}/waitlist` — **requires authentication**.
+
+### POST /events/{eventId}/waitlist
+
+Join the waitlist when the event is full.
+
+**Response `201 Created`:** `WaitlistEntryResponse`
+
+**Common errors:**
+
+- `400` — `"Event is not full; register directly instead"`
+- `400` — `"User is already on the waitlist for this event"`
+
+When a confirmed registration is canceled, the first waitlist entry is **automatically promoted** (FIFO).
+
+---
+
+### DELETE /events/{eventId}/waitlist/me
+
+Leave the waitlist.
+
+**Response `204 No Content`**
+
+---
+
+### GET /events/{eventId}/waitlist
+
+Lists waitlist entries in join order. **Event owner only.**
+
+**Response `200 OK`:** array of `WaitlistEntryResponse`
+
+---
+
+## Admin
+
+Base path: `/admin` — **requires ADMIN role**.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/admin/users` | List all users with roles |
+| `PUT` | `/admin/users/{id}/role` | Update user role |
+| `GET` | `/admin/stats` | Platform statistics |
+| `DELETE` | `/admin/events/{id}` | Soft-delete any event |
+
+Bootstrap admin in Docker: `admin@eventhub.local` / `admin123456` (override via `ADMIN_BOOTSTRAP_*` env vars).
+
+---
+
 ## Observability
 
 | Endpoint | Description |
@@ -383,6 +463,9 @@ Custom metric: `eventhub_registrations_confirmed_total` — incremented on each 
 | `users` | V2 |
 | `event_registrations` | V4 |
 | `refresh_tokens` | V6 |
+| `users.role` | V7 |
+| `categories` | V8 |
+| `event_waitlist` | V9 |
 
 Registration status values: `CONFIRMED`, `CANCELED`.
 
