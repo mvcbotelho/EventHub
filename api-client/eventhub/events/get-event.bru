@@ -1,0 +1,19 @@
+meta {
+  name: Get Event
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/events/{{eventId}}
+  body: none
+  auth: inherit
+}
+
+headers {
+  accept: application/json
+}
+
+docs {
+  Returns details for a single event. Uses the `eventId` environment variable.
+}

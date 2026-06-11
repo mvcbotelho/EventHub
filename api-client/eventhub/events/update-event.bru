@@ -1,0 +1,31 @@
+meta {
+  name: Update Event
+  type: http
+  seq: 7
+}
+
+put {
+  url: {{baseUrl}}/events/{{eventId}}
+  body: json
+  auth: inherit
+}
+
+headers {
+  content-type: application/json
+  accept: application/json
+}
+
+body:json {
+  {
+    "title": "Java Meetup (Updated)",
+    "description": "Spring Boot 3 advanced topics",
+    "location": "São Paulo",
+    "startDateTime": "2026-12-15T19:00:00Z",
+    "endDateTime": "2026-12-15T21:00:00Z",
+    "maxParticipants": 50
+  }
+}
+
+docs {
+  Updates an event. Only the event owner can perform this action.
+}

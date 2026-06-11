@@ -1,0 +1,19 @@
+meta {
+  name: List Registered Events
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/events/registered
+  body: none
+  auth: inherit
+}
+
+headers {
+  accept: application/json
+}
+
+docs {
+  Lists events the authenticated user is registered for.
+}

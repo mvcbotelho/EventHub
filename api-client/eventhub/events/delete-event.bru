@@ -1,0 +1,19 @@
+meta {
+  name: Delete Event
+  type: http
+  seq: 8
+}
+
+delete {
+  url: {{baseUrl}}/events/{{eventId}}
+  body: none
+  auth: inherit
+}
+
+headers {
+  accept: application/json
+}
+
+docs {
+  Deletes an event. Only the event owner can perform this action.
+}

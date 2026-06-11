@@ -1,0 +1,19 @@
+meta {
+  name: List My Events
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/events/mine
+  body: none
+  auth: inherit
+}
+
+headers {
+  accept: application/json
+}
+
+docs {
+  Lists events created by the authenticated user.
+}

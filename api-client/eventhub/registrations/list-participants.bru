@@ -1,0 +1,20 @@
+meta {
+  name: List Participants
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/events/{{eventId}}/participants
+  body: none
+  auth: inherit
+}
+
+headers {
+  accept: application/json
+}
+
+docs {
+  Lists confirmed participants for an event.
+  Only the event owner can access this endpoint.
+}

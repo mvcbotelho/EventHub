@@ -1,0 +1,21 @@
+meta {
+  name: Register for Event
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/events/{{eventId}}/registrations
+  body: none
+  auth: inherit
+}
+
+headers {
+  accept: application/json
+}
+
+docs {
+  Registers the authenticated user for an event.
+  Uses the `eventId` environment variable (set after Create Event).
+  The event owner cannot register for their own event.
+}

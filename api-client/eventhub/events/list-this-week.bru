@@ -1,0 +1,19 @@
+meta {
+  name: List Events This Week
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/events/this-week
+  body: none
+  auth: inherit
+}
+
+headers {
+  accept: application/json
+}
+
+docs {
+  Lists events starting in the current week (Monday to Sunday, UTC).
+}
