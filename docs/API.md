@@ -21,6 +21,8 @@ Public routes (no token):
 
 - `POST /auth/register`
 - `POST /auth/login`
+- `POST /auth/refresh`
+- `POST /auth/logout`
 - `GET /actuator/health`
 
 All other routes require:
@@ -29,7 +31,7 @@ All other routes require:
 Authorization: Bearer <token>
 ```
 
-The token is obtained from `POST /auth/login`. Default expiration: **24 hours** (`JWT_EXPIRATION_MS=86400000`).
+The access token is obtained from `POST /auth/login` or `POST /auth/refresh`. Default access token expiration: **24 hours** (`JWT_EXPIRATION_MS=86400000`). Refresh tokens default to **7 days** (`JWT_REFRESH_EXPIRATION_MS=604800000`).
 
 ### Standard error format
 
@@ -109,6 +111,7 @@ Authenticates the user and returns a JWT.
 ```json
 {
   "token": "eyJhbGciOiJIUzI1NiJ9...",
+  "refreshToken": "550e8400-e29b-41d4-a716-446655440000",
   "type": "Bearer"
 }
 ```
@@ -116,6 +119,47 @@ Authenticates the user and returns a JWT.
 **Common errors:**
 
 - `401` — `"Invalid email or password"`
+
+---
+
+### POST /auth/refresh
+
+Exchanges a valid refresh token for a new access token and a rotated refresh token.
+
+**Authentication:** not required
+
+**Body:**
+
+```json
+{
+  "refreshToken": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+**Response `200 OK`:** same format as login (`token`, `refreshToken`, `type`)
+
+**Common errors:**
+
+- `400` — `"Invalid refresh token"`
+- `400` — `"Refresh token expired"`
+
+---
+
+### POST /auth/logout
+
+Revokes a refresh token (session logout). The access token remains valid until it expires.
+
+**Authentication:** not required
+
+**Body:**
+
+```json
+{
+  "refreshToken": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+**Response `204 No Content`**
 
 ---
 
@@ -169,27 +213,52 @@ Creates an event. The authenticated user becomes the **owner**.
 
 ### GET /events
 
-Lists all events.
+Lists all events (paginated, with optional filters).
 
-**Response `200 OK`:** array of `EventResponse`
+**Query params:**
+
+| Param | Type | Default | Description |
+|-------|------|---------|-------------|
+| `page` | integer | `0` | Zero-based page index |
+| `size` | integer | `20` | Page size |
+| `sort` | string | `startDateTime,asc` | Spring Data sort (e.g. `title,desc`) |
+| `title` | string | — | Case-insensitive partial match |
+| `location` | string | — | Case-insensitive partial match |
+| `startFrom` | ISO-8601 | — | Minimum `startDateTime` (inclusive) |
+| `startTo` | ISO-8601 | — | Maximum `startDateTime` (inclusive) |
+
+**Response `200 OK`:** `PageResponse<EventResponse>`
+
+```json
+{
+  "content": [ { "...": "EventResponse" } ],
+  "page": 0,
+  "size": 20,
+  "totalElements": 42,
+  "totalPages": 3,
+  "last": false
+}
+```
+
+The same query parameters apply to `/events/mine`, `/events/this-week`, and `/events/registered`.
 
 ---
 
 ### GET /events/mine
 
-Lists events created by the authenticated user.
+Lists events created by the authenticated user (paginated, filterable).
 
 ---
 
 ### GET /events/this-week
 
-Lists events whose **start date** falls in the current week (Monday 00:00 UTC through Sunday).
+Lists events whose **start date** falls in the current week (Monday 00:00 UTC through Sunday), paginated and filterable.
 
 ---
 
 ### GET /events/registered
 
-Lists events where the authenticated user has a `CONFIRMED` registration.
+Lists events where the authenticated user has a `CONFIRMED` registration (paginated, filterable).
 
 ---
 
@@ -220,7 +289,7 @@ Updates an event. **Owner only.**
 
 ### DELETE /events/{id}
 
-Deletes an event. **Owner only.** Registrations are removed via `ON DELETE CASCADE`.
+Soft-deletes an event. **Owner only.** The event is hidden from listings and returns `404` on direct lookup; data remains in the database.
 
 **Response `204 No Content`**
 
@@ -277,26 +346,14 @@ Lists `CONFIRMED` participants. **Event owner only.**
 
 ---
 
-## Planned endpoints
-
-Not present in the current codebase:
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/auth/refresh` | Refresh token — *planned* |
-| GET | `/events?query=&page=&size=` | Paginated filtered listing — *planned* |
-
-See [`NEXT_STEPS.md`](NEXT_STEPS.md) for priorities.
-
----
-
 ## Database tables (reference)
 
 | Table | Migration |
 |-------|-----------|
-| `events` | V1 (+ `owner_id` in V3) |
+| `events` | V1 (+ `owner_id` in V3, `deleted_at` in V5) |
 | `users` | V2 |
 | `event_registrations` | V4 |
+| `refresh_tokens` | V6 |
 
 Registration status values: `CONFIRMED`, `CANCELED`.
 

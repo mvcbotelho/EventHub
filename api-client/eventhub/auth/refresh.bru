@@ -1,11 +1,11 @@
 meta {
-  name: Login
+  name: Refresh Token
   type: http
-  seq: 2
+  seq: 4
 }
 
 post {
-  url: {{baseUrl}}/auth/login
+  url: {{baseUrl}}/auth/refresh
   body: json
   auth: none
 }
@@ -17,8 +17,7 @@ headers {
 
 body:json {
   {
-    "email": "{{email}}",
-    "password": "{{password}}"
+    "refreshToken": "{{refreshToken}}"
   }
 }
 
@@ -30,5 +29,5 @@ script:post-response {
 }
 
 docs {
-  Authenticates the user and saves the access token and refresh token in environment variables.
+  Exchanges a refresh token for a new access token and rotated refresh token.
 }
