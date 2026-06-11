@@ -1,4 +1,4 @@
--- Stage 1 events had no owner; clear test data before adding the FK.
+-- Eventos da etapa 1 não tinham dono; limpa dados de teste antes de adicionar a FK.
 DELETE FROM events;
 
 ALTER TABLE events
