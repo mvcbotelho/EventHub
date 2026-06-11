@@ -1,5 +1,6 @@
 package com.marcus.eventhub.support;
 
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -7,6 +8,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 @Testcontainers
+@ActiveProfiles("integration")
 public abstract class AbstractPostgresIntegrationTest {
 
     @Container
@@ -26,5 +28,8 @@ public abstract class AbstractPostgresIntegrationTest {
         registry.add("eventhub.rate-limit.enabled", () -> "false");
         registry.add("eventhub.mail.enabled", () -> "false");
         registry.add("management.health.mail.enabled", () -> "false");
+        registry.add("management.endpoints.web.exposure.include", () -> "health,prometheus");
+        registry.add("management.endpoint.prometheus.access", () -> "unrestricted");
+        registry.add("management.prometheus.metrics.export.enabled", () -> "true");
     }
 }
