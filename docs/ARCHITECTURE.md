@@ -236,12 +236,12 @@ Implementada nos **services**, não via `@PreAuthorize`:
 
 ## Testes (estado atual)
 
-| Tipo | Status |
-|------|--------|
-| `EventHubApplicationTests.contextLoads` | Existe (profile `test`, H2, Flyway off) |
-| Testes unitários de services | **Não implementados** |
-| Testes de integração (Testcontainers) | **Não implementados** |
-| Testes de controller (MockMvc) | **Não implementados** |
+| Tipo | Classe | Status |
+|------|--------|--------|
+| Contexto Spring (H2) | `EventHubApplicationTests` | Ativo |
+| Unitários | `AuthServiceTest`, `EventServiceTest`, `RegistrationServiceTest` | Ativo |
+| Integração (Testcontainers) | `EventHubFlowIT` | Ativo — requer Docker |
+| CI | `.github/workflows/ci.yml` | `mvn verify` no push/PR |
 
 ---
 

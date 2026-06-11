@@ -42,3 +42,12 @@ eventhub:
     secret: ${JWT_SECRET:change-me-use-a-long-secret-key-for-development-only-256bits}
     expiration-ms: ${JWT_EXPIRATION_MS:86400000}
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+

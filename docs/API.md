@@ -373,7 +373,12 @@ Itens **não presentes** no código atual. Mantidos aqui apenas como referência
 |--------|----------|-----------|
 | POST | `/auth/refresh` | Refresh token — *planejado* |
 | GET | `/events?query=&page=&size=` | Listagem paginada e filtrada — *planejado* |
-| GET | `/actuator/health` | Health check — *planejado (Actuator)* |
+
+### Infraestrutura
+
+| Método | Endpoint | Descrição |
+|--------|----------|-----------|
+| GET | `/actuator/health` | Health check público — **implementado** |
 
 Consulte [`NEXT_STEPS.md`](NEXT_STEPS.md) para prioridades.
 

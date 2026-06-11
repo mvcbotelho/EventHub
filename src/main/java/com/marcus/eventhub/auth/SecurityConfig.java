@@ -20,9 +20,14 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final SecurityProblemHandler securityProblemHandler;
 
-    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
+    public SecurityConfig(
+            JwtAuthenticationFilter jwtAuthenticationFilter,
+            SecurityProblemHandler securityProblemHandler
+    ) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.securityProblemHandler = securityProblemHandler;
     }
 
     @Bean
@@ -34,6 +39,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/auth/register", "/auth/login").permitAll()
+                        .requestMatchers("/actuator/health").permitAll()
                         .requestMatchers(
                                 "/swagger-ui.html",
                                 "/swagger-ui/**",
@@ -44,10 +50,8 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(ex -> ex
-                        .authenticationEntryPoint((request, response, authException) ->
-                                response.sendError(401, "Unauthorized"))
-                        .accessDeniedHandler((request, response, accessDeniedException) ->
-                                response.sendError(403, "Forbidden"))
+                        .authenticationEntryPoint(securityProblemHandler)
+                        .accessDeniedHandler(securityProblemHandler)
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 

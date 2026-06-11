@@ -85,52 +85,38 @@ O que **ainda não existe** no código:
 
 ---
 
-## Próxima fase recomendada
-
 ### Fase 6 — Qualidade, testes e confiabilidade
 
-Prioridade alta para transformar o MVP em um projeto de portfólio mais robusto.
+- [x] Testes unitários: `AuthServiceTest`, `EventServiceTest`, `RegistrationServiceTest`
+- [x] Testes de integração com Testcontainers (`EventHubFlowIT`)
+- [x] MockMvc: fluxo completo, 401 JSON, 403 ownership, health público
+- [x] Respostas JSON padronizadas em 401/403 (`SecurityProblemHandler`)
+- [x] Spring Boot Actuator (`GET /actuator/health`)
+- [x] Pipeline CI (`.github/workflows/ci.yml`)
 
-**Por que agora?** O domínio principal está estável. Testes automatizados protegem refatorações futuras e demonstram maturidade técnica.
+---
+
+## Próxima fase recomendada
+
+### Fase 7 — Evolução de produto e observabilidade
+
+Prioridade média/baixa após a base de qualidade estar pronta.
 
 ---
 
 ## Lista priorizada de tarefas
 
-### Alta prioridade
+### Concluído na Fase 6
 
-1. **Testes unitários de services**
-   - `AuthService` (cadastro duplicado, login)
-   - `EventService` (validação de datas, ownership)
-   - `RegistrationService` (capacidade, duplicata, evento encerrado)
+1. ~~Testes unitários de services~~
+2. ~~Testes de integração com Testcontainers~~
+3. ~~Testes MockMvc (401, 403, fluxo feliz)~~
+4. ~~Erros JSON no Spring Security~~
+5. ~~Actuator health~~
+6. ~~GitHub Actions CI~~
 
-2. **Testes de integração com Testcontainers**
-   - Adicionar dependência `testcontainers` + `postgresql`
-   - `@SpringBootTest` com PostgreSQL real
-   - Fluxo completo: register → login → create event → register → list participants
-
-3. **Testes de controller com `@WebMvcTest` ou `@AutoConfigureMockMvc`**
-   - Verificar status HTTP e corpo JSON
-   - Verificar rotas protegidas retornando 401 sem token
-
-### Média prioridade
-
-4. **Melhorar respostas de erro de segurança**
-   - Retornar JSON padronizado (`ApiErrorResponse`) em 401/403 do Spring Security
-   - Hoje alguns casos retornam corpo vazio via `sendError`
-
-5. **Spring Boot Actuator**
-   - `/actuator/health` para Docker healthcheck da app
-   - Expor apenas endpoints necessários
-
-6. **CI/CD básico**
-   - GitHub Actions: build Maven + testes
-   - Opcional: build da imagem Docker
-
-### Baixa prioridade (evolução de produto)
-
-7. **Paginação** nas listagens (`GET /events`, `/events/mine`, etc.)
-8. **Filtros** por local, data ou título
+### Alta prioridade (Fase 7)
+8. **Paginação** nas listagens (`GET /events`, `/events/mine`, etc.)
 9. **Refresh token** e revogação de sessão
 10. **Soft delete** de eventos
 11. **Notificações** (e-mail ao inscrever-se) — *planejado, fora do escopo atual*

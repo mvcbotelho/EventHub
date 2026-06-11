@@ -147,6 +147,7 @@ docker compose down -v
 | Recurso | URL |
 |---------|-----|
 | Base URL local | http://localhost:8080 |
+| Health check | http://localhost:8080/actuator/health |
 | Swagger UI | http://localhost:8080/swagger-ui.html |
 | OpenAPI JSON | http://localhost:8080/api-docs |
 
@@ -197,6 +198,16 @@ Definidas em `.env.example` e usadas pelo `docker-compose.yml`:
 # Subir em background
 docker compose up --build -d
 
+# Testes unitários (rápidos, sem Docker extra)
+docker run --rm -v "$PWD":/app -w /app maven:3.9.9-eclipse-temurin-21 mvn test
+
+# Suite completa incluindo integração (requer Docker para Testcontainers)
+docker run --rm -v "$PWD":/app -w /app -v /var/run/docker.sock:/var/run/docker.sock \
+  maven:3.9.9-eclipse-temurin-21 mvn verify
+
+# Health check
+curl http://localhost:8080/actuator/health
+
 # Ver logs da API
 docker logs -f eventhub-api
 
@@ -205,9 +216,6 @@ docker logs -f eventhub-postgres
 
 # Rebuild forçado
 docker compose up --build --force-recreate
-
-# Compilar localmente (requer Java 21 e Maven)
-./mvnw package -DskipTests
 ```
 
 ## Exemplo rápido com curl
@@ -252,8 +260,9 @@ curl -X POST http://localhost:8080/events \
 | Inscrições | Concluído |
 | Swagger/OpenAPI | Concluído |
 | Collection Bruno | Concluído |
-| Testes automatizados | Mínimo (`contextLoads` apenas) |
-| CI/CD | Não iniciado |
+| Testes automatizados | Unitários + integração (Testcontainers) |
+| CI/CD | GitHub Actions (`mvn verify`) |
+| Actuator | `GET /actuator/health` |
 | Testcontainers | Planejado |
 
 **Versão:** `0.0.1-SNAPSHOT` — MVP funcional, pronto para evolução em qualidade e observabilidade.
@@ -269,7 +278,8 @@ curl -X POST http://localhost:8080/events \
 | 3 | Ownership de eventos | Concluída |
 | 4 | Inscrições em eventos | Concluída |
 | 5 | Collection Bruno | Concluída |
-| 6 | Testes, CI/CD e observabilidade | **Próxima** |
+| 6 | Testes, CI/CD e observabilidade | **Concluída** |
+| 7 | Paginação, filtros e evolução de produto | **Próxima** |
 
 Detalhes em [`docs/NEXT_STEPS.md`](docs/NEXT_STEPS.md).
 
